@@ -1,21 +1,20 @@
 ﻿using Engine.Models;
 
-namespace Engine
+namespace Engine;
+
+public class FileMigrationManager
 {
-    public class FileMigrationManager
+    public FileMigrationManager()
     {
-        public FileMigrationManager()
+    }
+
+    public async Task StartCopy(StartCopyInfo startCopyInfo)
+    {
+        if (startCopyInfo is null)
         {
+            throw new ArgumentNullException(nameof(startCopyInfo));
         }
 
-        public async Task StartCopy(StartCopyInfo startCopyInfo)
-        {
-            if (startCopyInfo is null)
-            {
-                throw new ArgumentNullException(nameof(startCopyInfo));
-            }
 
-
-        }
     }
 }

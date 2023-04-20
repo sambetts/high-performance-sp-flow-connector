@@ -7,7 +7,7 @@ using Microsoft.Identity.Client;
 using Microsoft.SharePoint.Client;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Engine;
+namespace Engine.Utils;
 
 public class AuthUtils
 {
@@ -110,13 +110,13 @@ public class AuthUtils
     public static async Task<ClientContext> GetClientContext(Config config, string siteUrl, ILogger tracer, Action<AuthenticationResult>? authResultDelegate)
     {
         return await GetClientContext(siteUrl, config.AzureAdConfig.TenantId!, config.AzureAdConfig.ClientID!,
-            config.AzureAdConfig.Secret!, config.KeyVaultUrl, config.BaseServerAddress, tracer, authResultDelegate);
+            config.AzureAdConfig.ClientSecret!, config.KeyVaultUrl, config.BaseServerAddress, tracer, authResultDelegate);
     }
 
     public static async Task<IConfidentialClientApplication> GetNewClientApp(Config config)
     {
         return await GetNewClientApp(config.AzureAdConfig.TenantId!,
-            config.AzureAdConfig.ClientID!, config.AzureAdConfig.Secret!, config.KeyVaultUrl);
+            config.AzureAdConfig.ClientID!, config.AzureAdConfig.ClientSecret!, config.KeyVaultUrl);
     }
 }
 

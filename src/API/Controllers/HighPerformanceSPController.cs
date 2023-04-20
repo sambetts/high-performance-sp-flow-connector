@@ -17,7 +17,7 @@ namespace API.Controllers
         }
 
         [HttpPost(Name = nameof(StartCopy))]
-        public IActionResult StartCopy([FromBody] StartCopyInfo startCopyInfo)
+        public IActionResult StartCopy([FromBody] StartCopyRequest startCopyInfo)
         {
             if (startCopyInfo == null)
             {

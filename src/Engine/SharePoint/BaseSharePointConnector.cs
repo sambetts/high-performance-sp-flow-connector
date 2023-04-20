@@ -21,13 +21,3 @@ public abstract class BaseSharePointConnector
     public ILogger Tracer => tracer;
     public SPOTokenManager TokenManager => tokenManager;
 }
-
-public abstract class BaseChildLoader
-{
-    public BaseChildLoader(BaseSharePointConnector parent)
-    {
-        Parent = parent;
-    }
-
-    public BaseSharePointConnector Parent { get; }
-}

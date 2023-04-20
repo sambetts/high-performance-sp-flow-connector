@@ -11,13 +11,8 @@ public class Config : BaseConfig
     [ConfigValue]
     public string BaseServerAddress { get; set; } = string.Empty;
 
-
     [ConfigValue]
     public string KeyVaultUrl { get; set; } = string.Empty;
-
-
-    [ConfigValue]
-    public string BlobContainerName { get; set; } = string.Empty;
 
     [ConfigValue(true)]
     public string AppInsightsInstrumentationKey { get; set; } = string.Empty;
@@ -29,9 +24,4 @@ public class Config : BaseConfig
 
     [ConfigSection("Dev")]
     public DevConfig DevConfig { get; set; } = null!;
-}
-
-public class ConfigException : Exception
-{
-    public ConfigException(string message) : base(message) { }
 }

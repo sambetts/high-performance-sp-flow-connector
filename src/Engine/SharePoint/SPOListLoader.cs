@@ -3,13 +3,20 @@ using Microsoft.SharePoint.Client;
 
 namespace Engine.SharePoint;
 
-public class SPOListLoader : BaseChildLoader, IListLoader<ListItemCollectionPosition>
+public class SPOListLoader : IListLoader<ListItemCollectionPosition>
 {
     private List? _listDef = null;
-    public SPOListLoader(List list, BaseSharePointConnector baseSharePointConnector) : base(baseSharePointConnector)
+    private readonly List _list;
+    private readonly SPOTokenManager _tokenManager;
+    private readonly ILogger _logger;
+
+    public SPOListLoader(List list, SPOTokenManager tokenManager, ILogger logger)
     {
         this.ListId = list.Id;
         this.Title = list.Title;
+        _list = list;
+        _tokenManager = tokenManager;
+        _logger = logger;
     }
     public string Title { get; set; }
     public Guid ListId { get; set; }
@@ -31,14 +38,14 @@ public class SPOListLoader : BaseChildLoader, IListLoader<ListItemCollectionPosi
         camlQuery.ListItemCollectionPosition = position;
 
         // For large lists, make sure we refresh the context when the token expires.
-        var spClientList = await Parent.TokenManager.GetOrRefreshContext(() => _listDef = null);
+        var spClientList = await _tokenManager.GetOrRefreshContext(() => _listDef = null);
 
         // Load list definition
         if (_listDef == null)
         {
             _listDef = spClientList.Web.Lists.GetById(this.ListId);
             spClientList.Load(_listDef, l => l.BaseType, l => l.ItemCount, l => l.RootFolder, list => list.Title);
-            await spClientList.ExecuteQueryAsyncWithThrottleRetries(Parent.Tracer);
+            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
         }
 
         // List items
@@ -69,14 +76,19 @@ public class SPOListLoader : BaseChildLoader, IListLoader<ListItemCollectionPosi
                 ServerRelativeUrl = _listDef.RootFolder.ServerRelativeUrl
             };
         }
+        else
+        {
+            // Unsupported list type
+            return pageResults;
+        }
 
         try
         {
-            await spClientList.ExecuteQueryAsyncWithThrottleRetries(Parent.Tracer);
+            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
         }
         catch (System.Net.WebException ex)
         {
-            Parent.Tracer.LogError($"Got error reading list: {ex.Message}.");
+            _logger.LogError($"Got error reading list: {ex.Message}.");
         }
 
         // Remember position, if more than 5000 items are in the list
@@ -91,33 +103,23 @@ public class SPOListLoader : BaseChildLoader, IListLoader<ListItemCollectionPosi
             if (!itemIsFolder)
             {
                 SharePointFileInfoWithList? foundFileInfo = null;
-                if (_listDef.BaseType == BaseType.GenericList)
-                {
-                    pageResults.FilesFound.AddRange(ProcessListItemAttachments(item, listModel, spClientList));
-                }
-                else if (_listDef.BaseType == BaseType.DocumentLibrary)
-                {
-                    // We might be able get the drive Id from the actual list, but not sure how...get it from 1st item instead
-                    var docLib = (DocLib)listModel;
-                    if (string.IsNullOrEmpty(docLib.DriveId))
-                    {
-                        try
-                        {
-                            ((DocLib)listModel).DriveId = item.File.VroomDriveID;
-                        }
-                        catch (ServerObjectNullReferenceException)
-                        {
-                            Parent.Tracer.LogWarning($"WARNING: Couldn't get Drive info for list {_listDef.Title} on item {itemUrl}. Ignoring.");
-                            break;
-                        }
-                    }
 
-                    foundFileInfo = ProcessDocLibItem(item, listModel, spClientList);
-                }
-                if (foundFileInfo != null)
+                // We might be able get the drive Id from the actual list, but not sure how...get it from 1st item instead
+                var docLib = (DocLib)listModel;
+                if (string.IsNullOrEmpty(docLib.DriveId))
                 {
-                    pageResults.FilesFound.Add(foundFileInfo!);
+                    try
+                    {
+                        ((DocLib)listModel).DriveId = item.File.VroomDriveID;
+                    }
+                    catch (ServerObjectNullReferenceException)
+                    {
+                        _logger.LogWarning($"WARNING: Couldn't get Drive info for list {_listDef.Title} on item {itemUrl}. Ignoring.");
+                        break;
+                    }
                 }
+
+                foundFileInfo = ProcessDocLibItem(item, listModel, spClientList);
             }
             else
             {
@@ -143,21 +145,6 @@ public class SPOListLoader : BaseChildLoader, IListLoader<ListItemCollectionPosi
         return null;
     }
 
-    /// <summary>
-    /// Process custom list item with possibly multiple attachments
-    /// </summary>
-    private List<SharePointFileInfoWithList> ProcessListItemAttachments(ListItem item, SiteList listModel, ClientContext spClient)
-    {
-        var attachmentsResults = new List<SharePointFileInfoWithList>();
-
-        foreach (var attachment in item.AttachmentFiles)
-        {
-            var foundFileInfo = GetSharePointFileInfo(item, attachment.ServerRelativeUrl, listModel, spClient);
-            attachmentsResults.Add(foundFileInfo);
-        }
-
-        return attachmentsResults;
-    }
     SharePointFileInfoWithList GetSharePointFileInfo(ListItem item, string url, SiteList listModel, ClientContext _spClient)
     {
         var dir = "";

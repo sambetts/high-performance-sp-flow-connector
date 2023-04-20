@@ -34,8 +34,9 @@ public class Tests
     {
         var m = new FileMigrationStartManager(new FakeChunkManager(), _config, _logger);
 
-        await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
+        var r = await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
             "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction));
+        Assert.IsNotNull(r);
     }
 
     [TestMethod]

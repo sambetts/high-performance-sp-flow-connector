@@ -40,7 +40,7 @@ public class FileMigrationStartManager
         var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
         {
             // Create a new class to process each chunk and send to service bus
-            await _chunkProcessor.ProcessChunk(chunk, destInfo);
+            await _chunkProcessor.ProcessChunk(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
         });
 
         // Process all files
@@ -50,6 +50,10 @@ public class FileMigrationStartManager
         return sourceFiles.FilesFound;
     }
 
+    public async Task MakeCopy(FileCopyBatch batch)
+    {
+
+    }
     async Task<(List, List)> GetSourceAndDestinationLists(CopyInfo sourceInfo, CopyInfo destInfo, ClientContext spClient)
     {
 
@@ -81,4 +85,11 @@ public class FileMigrationStartManager
 
         return (sourceList, destList);
     }
+}
+
+public class FileCopyBatch
+{
+    public StartCopyRequest Request { get; set; } = null!;
+
+    public List<SharePointFileInfoWithList> Files { get; set; } = new();
 }

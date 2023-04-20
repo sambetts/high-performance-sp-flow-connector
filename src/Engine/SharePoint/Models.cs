@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace Engine.SharePoint;
 
@@ -30,19 +25,8 @@ public class SiteList : IEquatable<SiteList>
 public class DocLib : SiteList
 {
     public DocLib() { }
-    public DocLib(SiteList l) : base(l)
-    {
-        if (l is DocLib)
-        {
-            var lib = (DocLib)l;
-            this.DriveId = lib.DriveId;
-            this.Delta = lib.Delta;
-            this.Files = lib.Files;
-        }
-    }
     public string DriveId { get; set; } = string.Empty;
 
-    public List<DocumentSiteWithMetadata> Documents => Files.Where(f => f.GetType() == typeof(DocumentSiteWithMetadata)).Cast<DocumentSiteWithMetadata>().ToList();
     public string Delta { get; set; } = string.Empty;
 }
 /// <summary>
@@ -183,86 +167,6 @@ public class DriveItemSharePointFileInfo : SharePointFileInfoWithList
 
     public string DriveId { get; set; } = string.Empty;
     public string GraphItemId { get; set; } = string.Empty;
-}
-
-public enum SiteFileAnalysisState
-{
-    Unknown,
-    AnalysisPending,
-    AnalysisInProgress,
-    Complete,
-    FatalError,
-    TransientError
-}
-
-public class DocumentSiteWithMetadata : DriveItemSharePointFileInfo
-{
-    public DocumentSiteWithMetadata() { }
-    public DocumentSiteWithMetadata(DriveItemSharePointFileInfo driveArg) : base(driveArg)
-    {
-        this.AccessCount = null;
-    }
-
-    public SiteFileAnalysisState State { get; set; } = SiteFileAnalysisState.Unknown;
-
-    public int? AccessCount { get; set; } = null;
-    public int VersionCount { get; set; }
-    public long VersionHistorySize { get; set; }
-}
-
-
-// https://docs.microsoft.com/en-us/graph/api/resources/itemactivitystat?view=graph-rest-1.0
-public class ItemAnalyticsRepsonse
-{
-
-    [JsonPropertyName("incompleteData")]
-    public AnalyticsIncompleteData? IncompleteData { get; set; }
-
-    [JsonPropertyName("access")]
-    public AnalyticsItemActionStat? AccessStats { get; set; }
-
-    [JsonPropertyName("startDateTime")]
-    public DateTime StartDateTime { get; set; }
-
-    [JsonPropertyName("endDateTime")]
-    public DateTime EndDateTime { get; set; }
-
-
-    public class AnalyticsIncompleteData
-    {
-        [JsonPropertyName("wasThrottled")]
-        public bool WasThrottled { get; set; }
-
-        [JsonPropertyName("resultsPending")]
-        public bool ResultsPending { get; set; }
-
-        [JsonPropertyName("notSupported")]
-        public bool NotSupported { get; set; }
-    }
-    public class AnalyticsItemActionStat
-    {
-        /// <summary>
-        /// The number of times the action took place.
-        /// </summary>
-        [JsonPropertyName("actionCount")]
-        public int ActionCount { get; set; } = 0;
-
-        /// <summary>
-        /// The number of distinct actors that performed the action.
-        /// </summary>
-        [JsonPropertyName("actorCount")]
-        public int ActorCount { get; set; } = 0;
-    }
-}
-public interface ISiteCollectionLoader<T>
-{
-    public Task<List<IWebLoader<T>>> GetWebs();
-}
-
-
-public interface IWebLoader<T>
-{
-    public Task<List<IListLoader<T>>> GetLists();
 }
 
 public interface IListLoader<T>

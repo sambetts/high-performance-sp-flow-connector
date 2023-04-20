@@ -34,7 +34,8 @@ public class Tests
     {
         var m = new FileMigrationManager(_config, _logger);
 
-        await m.StartCopy(new Engine.Models.StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", "https://m365x72460609.sharepoint.com/sites/Files", Engine.Models.ConflictResolution.FailAction));
+        await m.StartCopy(new Engine.Models.StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
+            "https://m365x72460609.sharepoint.com/sites/Files", Engine.Models.ConflictResolution.FailAction));
     }
 
     [TestMethod]

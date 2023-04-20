@@ -120,6 +120,10 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
                 }
 
                 foundFileInfo = ProcessDocLibItem(item, listModel, spClientList);
+                if (foundFileInfo != null)
+                {
+                    pageResults.FilesFound.Add(foundFileInfo!);
+                }
             }
             else
             {

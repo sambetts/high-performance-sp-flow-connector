@@ -39,7 +39,7 @@ public class SPOTokenManager
         }
         return _context!;
     }
-    public async Task EnsureContextWebIsLoaded(ClientContext spClient)
+    async Task EnsureContextWebIsLoaded(ClientContext spClient)
     {
         var loaded = false;
         try

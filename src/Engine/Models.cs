@@ -10,24 +10,24 @@
     /// </summary>
     public class CopyInfo
     {
-        public CopyInfo(StartCopyRequest startCopyInfo)
+        public CopyInfo(string siteUrl, string relativeUrl)
         {
-            if (startCopyInfo is null)
+            if (string.IsNullOrEmpty(siteUrl))
             {
-                throw new ArgumentNullException(nameof(startCopyInfo));
+                throw new ArgumentNullException(nameof(siteUrl));
             }
-            if (string.IsNullOrEmpty(startCopyInfo.RelativeUrlToCopy) || !startCopyInfo.RelativeUrlToCopy.StartsWith("/"))
+            if (string.IsNullOrEmpty(relativeUrl) || !relativeUrl.StartsWith("/"))
             {
-                throw new ArgumentNullException(nameof(startCopyInfo.RelativeUrlToCopy));
+                throw new ArgumentNullException(nameof(relativeUrl));
             }
 
-            var folders = startCopyInfo.RelativeUrlToCopy.Split("/", StringSplitOptions.RemoveEmptyEntries);
+            var folders = relativeUrl.Split("/", StringSplitOptions.RemoveEmptyEntries);
             if (folders.Length == 0)
             {
-                throw new ArgumentNullException(nameof(startCopyInfo.RelativeUrlToCopy));
+                throw new ArgumentNullException(nameof(relativeUrl));
             }
 
-            this.ListUrl = $"{startCopyInfo.CurrentSite}/{folders[0]}";
+            this.ListUrl = $"{siteUrl}/{folders[0]}";
             this.FoldersRelativePath = string.Join("/", folders.Skip(1));
         }
 

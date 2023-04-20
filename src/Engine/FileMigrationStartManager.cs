@@ -1,27 +1,30 @@
 ﻿using Engine.Configuration;
 using Engine.Models;
 using Engine.SharePoint;
+using Engine.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.SharePoint.Client;
 
 namespace Engine;
 
-public class FileMigrationManager
+public class FileMigrationStartManager
 {
+    private readonly IFileResultManager _chunkProcessor;
     private readonly Config _config;
     private readonly ILogger _logger;
 
-    public FileMigrationManager(Config config, ILogger logger)
+    public FileMigrationStartManager(IFileResultManager chunkProcessor, Config config, ILogger logger)
     {
+        _chunkProcessor = chunkProcessor;
         _config = config;
         _logger = logger;
     }
 
-    public async Task StartCopy(StartCopyRequest startCopyInfo)
+    public async Task<List<SharePointFileInfoWithList>> StartCopy(StartCopyRequest startCopyInfo)
     {
         // Parse command into usable objects
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
-        var destInfo = new CopyInfo(startCopyInfo.DestinationSite, startCopyInfo.RelativeUrlToCopy);
+        var destInfo = new CopyInfo(startCopyInfo.DestinationSite, startCopyInfo.RelativeUrlDestination);
 
         var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentSite, _logger);
         var spClient = await sourceTokenManager.GetOrRefreshContext();
@@ -33,7 +36,18 @@ public class FileMigrationManager
         var sourceFiles = await crawler.CrawlList(new SPOListLoader(lists.Item1, sourceTokenManager, _logger), null);
         _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files in list '{lists.Item1.Title}'.");
 
+        // Push to queue in batches
+        var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
+        {
+            // Create a new class to process each chunk and send to service bus
+            await _chunkProcessor.ProcessChunk(chunk, destInfo);
+        });
 
+        // Process all files
+        l.AddRange(sourceFiles.FilesFound);
+        l.Flush();
+
+        return sourceFiles.FilesFound;
     }
 
     async Task<(List, List)> GetSourceAndDestinationLists(CopyInfo sourceInfo, CopyInfo destInfo, ClientContext spClient)

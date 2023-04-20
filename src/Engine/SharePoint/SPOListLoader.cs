@@ -229,5 +229,4 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
             throw new ArgumentOutOfRangeException(nameof(item), "Can't find modified column");
         }
     }
-
 }

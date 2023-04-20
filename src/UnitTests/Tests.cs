@@ -1,9 +1,9 @@
 using Engine;
 using Engine.Configuration;
-using Engine.Utils;
+using Engine.Models;
+using Engine.SharePoint;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace UnitTests;
 
@@ -32,18 +32,27 @@ public class Tests
     [TestMethod]
     public async Task FileMigrationManagerTests()
     {
-        var m = new FileMigrationManager(_config, _logger);
+        var m = new FileMigrationStartManager(new FakeChunkManager(), _config, _logger);
 
-        await m.StartCopy(new Engine.Models.StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
-            "https://m365x72460609.sharepoint.com/sites/Files", Engine.Models.ConflictResolution.FailAction));
+        await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
+            "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction));
     }
 
     [TestMethod]
     public async Task FileMigrationManagerInvalidArgTests()
     {
-        var m = new FileMigrationManager(_config, _logger);
+        var m = new FileMigrationStartManager(new FakeChunkManager(), _config, _logger);
 
         // No folder
-        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await m.StartCopy(new Engine.Models.StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", "https://m365x72460609.sharepoint.com/sites/Files", Engine.Models.ConflictResolution.FailAction)));
+        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => 
+            await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", "https://m365x72460609.sharepoint.com/sites/Files", "", ConflictResolution.FailAction)));
+    }
+
+    public class FakeChunkManager : IFileResultManager
+    {
+        public Task ProcessChunk(FileCopyBatch fileCopyBatch)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

@@ -18,11 +18,11 @@ public class SiteListsAndLibrariesCrawler<T>
 
     #endregion
 
-    public async Task<SiteCrawlContentsAndStats> CrawlList(IListLoader<T> listLoader, Func<SharePointFileInfoWithList, Task>? foundFileCallback)
+    public async Task<DocLibCrawlContents> CrawlList(IListLoader<T> listLoader, Func<SharePointFileInfoWithList, Task>? foundFileCallback)
     {
         PageResponse<T>? listPage = null;
 
-        var listResultsAll = new SiteCrawlContentsAndStats();
+        var listResultsAll = new DocLibCrawlContents();
         T? token = default(T);
 
         var allFolders = new List<string>();
@@ -45,8 +45,7 @@ public class SiteListsAndLibrariesCrawler<T>
         }
         if (pageCount > 1)
         {
-            _tracer.LogInformation($"List '{listLoader.Title}' totals: {listResultsAll.FilesFound.Count.ToString("N0")} files in scope, " +
-                $"{listResultsAll.IgnoredFiles.ToString("N0")} files ignored, and {listResultsAll.FoldersFound.Count.ToString("N0")} folders");
+            _tracer.LogInformation($"List '{listLoader.Title}' totals: {listResultsAll.FilesFound.Count.ToString("N0")} files in scope and {listResultsAll.FoldersFound.Count.ToString("N0")} folders");
         }
 
         // Add unique folders

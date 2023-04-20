@@ -5,15 +5,9 @@ namespace Engine.SharePoint;
 public class SiteList : IEquatable<SiteList>
 {
     public SiteList() { }
-    public SiteList(SiteList l)
-    {
-        this.Title = l.Title;
-        this.ServerRelativeUrl = l.ServerRelativeUrl;
-    }
 
     public string Title { get; set; } = string.Empty;
     public string ServerRelativeUrl { get; set; } = string.Empty;
-    public List<BaseSharePointFileInfo> Files { get; set; } = new List<BaseSharePointFileInfo>();
 
     public bool Equals(SiteList? other)
     {
@@ -26,8 +20,6 @@ public class DocLib : SiteList
 {
     public DocLib() { }
     public string DriveId { get; set; } = string.Empty;
-
-    public string Delta { get; set; } = string.Empty;
 }
 /// <summary>
 /// SharePoint Online file metadata for base file-type
@@ -159,11 +151,6 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
 public class DriveItemSharePointFileInfo : SharePointFileInfoWithList
 {
     public DriveItemSharePointFileInfo() : base() { }
-    public DriveItemSharePointFileInfo(DriveItemSharePointFileInfo driveArg) : base(driveArg)
-    {
-        this.DriveId = driveArg.DriveId;
-        this.GraphItemId = driveArg.GraphItemId;
-    }
 
     public string DriveId { get; set; } = string.Empty;
     public string GraphItemId { get; set; } = string.Empty;
@@ -177,19 +164,14 @@ public interface IListLoader<T>
     public Guid ListId { get; set; }
 }
 
-public class PageResponse<T> : BaseSiteCrawlContents
+public class PageResponse<T> : DocLibCrawlContents
 {
     public T? NextPageToken { get; set; } = default(T);
 }
 
-public class BaseSiteCrawlContents
+public class DocLibCrawlContents
 {
     public List<SharePointFileInfoWithList> FilesFound { get; set; } = new();
 
     public List<string> FoldersFound { get; set; } = new();
-}
-
-public class SiteCrawlContentsAndStats : BaseSiteCrawlContents
-{
-    public int IgnoredFiles { get; set; } = 0;
 }

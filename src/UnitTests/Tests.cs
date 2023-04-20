@@ -1,7 +1,6 @@
 using Engine;
 using Engine.Configuration;
 using Engine.Models;
-using Engine.SharePoint;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -32,28 +31,25 @@ public class Tests
     [TestMethod]
     public async Task FileMigrationManagerTests()
     {
-        var m = new FileMigrationStartManager(new FakeChunkManager(), _config, _logger);
+        var m = new FileMigrationStartManager(_config, _logger);
 
-        var r = await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
-            "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction));
+        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+        var r = await m.StartCopy(copyCfg, new FakeChunkManager());
         Assert.IsNotNull(r);
+
+        await m.MakeCopy(new FileCopyBatch { Files = r, Request = copyCfg }, new FakeFileListProcessor());
     }
 
     [TestMethod]
     public async Task FileMigrationManagerInvalidArgTests()
     {
-        var m = new FileMigrationStartManager(new FakeChunkManager(), _config, _logger);
+        var m = new FileMigrationStartManager(_config, _logger);
 
         // No folder
-        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => 
-            await m.StartCopy(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", "https://m365x72460609.sharepoint.com/sites/Files", "", ConflictResolution.FailAction)));
-    }
+        var invalidCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", 
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
 
-    public class FakeChunkManager : IFileResultManager
-    {
-        public Task ProcessChunk(FileCopyBatch fileCopyBatch)
-        {
-            return Task.CompletedTask;
-        }
+        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await m.StartCopy(invalidCfg, new FakeChunkManager()));
     }
 }

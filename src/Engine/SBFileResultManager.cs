@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Engine;
 
-public class FileResultManager : IFileResultManager
+public class SBFileResultManager : IFileResultManager
 {
     private Config _config;
     private ILogger _logger;
 
-    public FileResultManager(Config config, ILogger logger)
+    public SBFileResultManager(Config config, ILogger logger)
     {
         _config = config;
         _logger = logger;

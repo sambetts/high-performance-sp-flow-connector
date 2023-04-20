@@ -9,18 +9,16 @@ namespace Engine;
 
 public class FileMigrationStartManager
 {
-    private readonly IFileResultManager _chunkProcessor;
     private readonly Config _config;
     private readonly ILogger _logger;
 
-    public FileMigrationStartManager(IFileResultManager chunkProcessor, Config config, ILogger logger)
+    public FileMigrationStartManager(Config config, ILogger logger)
     {
-        _chunkProcessor = chunkProcessor;
         _config = config;
         _logger = logger;
     }
 
-    public async Task<List<SharePointFileInfoWithList>> StartCopy(StartCopyRequest startCopyInfo)
+    public async Task<List<SharePointFileInfoWithList>> StartCopy(StartCopyRequest startCopyInfo, IFileResultManager chunkProcessor)
     {
         // Parse command into usable objects
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
@@ -40,7 +38,7 @@ public class FileMigrationStartManager
         var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
         {
             // Create a new class to process each chunk and send to service bus
-            await _chunkProcessor.ProcessChunk(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
+            await chunkProcessor.ProcessChunk(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
         });
 
         // Process all files
@@ -50,9 +48,10 @@ public class FileMigrationStartManager
         return sourceFiles.FilesFound;
     }
 
-    public async Task MakeCopy(FileCopyBatch batch)
+    public async Task MakeCopy(FileCopyBatch batch, IFileListProcessor fileListProcessor)
     {
-
+        await fileListProcessor.Copy(batch);
+        _logger.LogInformation($"Copied {batch.Files.Count} files.");
     }
     async Task<(List, List)> GetSourceAndDestinationLists(CopyInfo sourceInfo, CopyInfo destInfo, ClientContext spClient)
     {
@@ -92,4 +91,16 @@ public class FileCopyBatch
     public StartCopyRequest Request { get; set; } = null!;
 
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
+}
+
+public interface IFileListProcessor
+{
+    Task Copy(FileCopyBatch batch);
+}
+public class SharePointFileListProcessor : IFileListProcessor
+{
+    public Task Copy(FileCopyBatch batch)
+    {
+        throw new NotImplementedException();
+    }
 }

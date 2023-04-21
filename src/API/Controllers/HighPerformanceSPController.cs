@@ -28,16 +28,8 @@ namespace API.Controllers
             {
                 return BadRequest();
             }
-
-            var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentSite, _logger);
-            var spClient = await sourceTokenManager.GetOrRefreshContext();
-            var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
-
-            var guid = await SPOListLoader.GetList(sourceInfo, spClient, _logger);
-
-            var m = new FileMigrationStartManager(_config, _logger);
-            var r = await m.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), new SBFileResultManager(_config, _logger));
-
+            var m = new SharePointFileMigrationManager(_config, _logger);
+            var r = await m.StartCopyAndSendToServiceBus(startCopyInfo);
 
             return Ok();
         }

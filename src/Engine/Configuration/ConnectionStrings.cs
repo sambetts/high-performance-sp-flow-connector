@@ -13,12 +13,6 @@ public class ConnectionStrings : BaseConfig
     }
 
     [ConfigValue]
-    public string Storage { get; set; } = string.Empty;
-
-    [ConfigValue]
-    public string SQLConnectionString { get; set; } = string.Empty;
-
-    [ConfigValue]
     public string ServiceBus { get; set; } = string.Empty;
 
 }

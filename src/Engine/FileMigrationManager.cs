@@ -1,22 +1,18 @@
 ﻿using Engine.Code;
-using Engine.Configuration;
 using Engine.Core;
 using Engine.Models;
 using Engine.SharePoint;
 using Engine.Utils;
 using Microsoft.Extensions.Logging;
-using Microsoft.SharePoint.Client;
 
 namespace Engine;
 
-public class FileMigrationStartManager
+public class FileMigrationManager
 {
-    private readonly Config _config;
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
 
-    public FileMigrationStartManager(Config config, ILogger logger)
+    public FileMigrationManager(ILogger logger)
     {
-        _config = config;
         _logger = logger;
     }
 
@@ -26,13 +22,10 @@ public class FileMigrationStartManager
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
         var destInfo = new CopyInfo(startCopyInfo.DestinationSite, startCopyInfo.RelativeUrlDestination);
 
-        var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentSite, _logger);
-        var spClient = await sourceTokenManager.GetOrRefreshContext();
-
         // Get source files
         var crawler = new DataCrawler<PAGETOKENTYPE>(_logger);
-        var sourceFiles = await crawler.CrawlList(listLoader);
-        //_logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files in list '{lists.Item1.Title}'.");
+        var sourceFiles = await crawler.CrawlListAllPages(listLoader);
+        _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files.");
 
         // Push to queue in batches
         var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
@@ -60,12 +53,4 @@ public class FileCopyBatch
     public StartCopyRequest Request { get; set; } = null!;
 
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
-}
-
-public class SharePointFileListProcessor : IFileListProcessor
-{
-    public Task Copy(FileCopyBatch batch)
-    {
-        throw new NotImplementedException();
-    }
 }

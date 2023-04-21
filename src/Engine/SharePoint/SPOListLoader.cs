@@ -5,6 +5,9 @@ using Microsoft.SharePoint.Client;
 
 namespace Engine.SharePoint;
 
+/// <summary>
+/// Loads a SharePoint document library using the SharePoint CSOM API. Supports paging.
+/// </summary>
 public class SPOListLoader : IListLoader<ListItemCollectionPosition>
 {
     private List? _listDef = null;
@@ -19,7 +22,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         _logger = logger;
     }
 
-    public async static Task<Guid> GetList(CopyInfo sourceInfo, ClientContext spClient, ILogger logger)
+    public async static Task<Guid> GetListId(CopyInfo sourceInfo, ClientContext spClient, ILogger logger)
     {
         var sourceList = spClient.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(sourceInfo.ListUrl));
         try
@@ -53,15 +56,16 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         camlQuery.ListItemCollectionPosition = position;
 
         // For large lists, make sure we refresh the context when the token expires. Do it for each page.
-        var spClientList = await _tokenManager.GetOrRefreshContext(() => _listDef = null);
+        var spClientList = await _tokenManager.GetOrRefreshContext(() => _listDef = null);      // When token expires, clear list def so it's reloaded
 
-        // Load list definition
+        // Load list definition if needed
         if (_listDef == null)
         {
             _listDef = spClientList.Web.Lists.GetById(_listId);
             spClientList.Load(_listDef, l => l.BaseType, l => l.ItemCount, l => l.RootFolder, list => list.Title);
             await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
         }
+        pageResults.ListLoaded = new SiteList { Title = _listDef.Title, ServerRelativeUrl = _listDef.RootFolder.ServerRelativeUrl };
 
         // List items
         listItems = _listDef.GetItems(camlQuery);

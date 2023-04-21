@@ -155,7 +155,7 @@ public class DriveItemSharePointFileInfo : SharePointFileInfoWithList
 public class DocLibCrawlContentsPageResponse<PAGETOKENTYPE> : DocLibCrawlContents
 {
     public PAGETOKENTYPE? NextPageToken { get; set; } = default(PAGETOKENTYPE);
-    public string Title { get; set; } = null!;
+    public SiteList ListLoaded { get; set; } = null!;
 }
 
 public class DocLibCrawlContents

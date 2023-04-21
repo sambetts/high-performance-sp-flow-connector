@@ -7,7 +7,6 @@ public class Config : BaseConfig
     {
     }
 
-
     [ConfigValue]
     public string BaseServerAddress { get; set; } = string.Empty;
 
@@ -21,6 +20,10 @@ public class Config : BaseConfig
 
     [ConfigSection("AzureAd")]
     public AzureAdConfig AzureAdConfig { get; set; } = null!;
+
+
+    [ConfigSection("ConnectionStrings")]
+    public ConnectionStrings ConnectionStrings { get; set; } = null!;
 
     [ConfigSection("Dev")]
     public DevConfig DevConfig { get; set; } = null!;

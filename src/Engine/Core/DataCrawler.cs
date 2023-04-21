@@ -16,7 +16,7 @@ public class DataCrawler<PAGETOKENTYPE>
         _tracer = tracer;
     }
 
-    public async Task<DocLibCrawlContents> CrawlList(IListLoader<PAGETOKENTYPE> listLoader)
+    public async Task<DocLibCrawlContents> CrawlListAllPages(IListLoader<PAGETOKENTYPE> listLoader)
     {
         DocLibCrawlContentsPageResponse<PAGETOKENTYPE>? listPage = null;
 
@@ -35,7 +35,7 @@ public class DataCrawler<PAGETOKENTYPE>
             {
                 listResultsAll.FilesFound.Add(file);
             }
-            _tracer.LogInformation($"Loaded {listPage.FilesFound.Count.ToString("N0")} files and {listPage.FoldersFound.Count.ToString("N0")} folders from list '{listPage.Title}' on page {pageCount}...");
+            _tracer.LogInformation($"Loaded {listPage.FilesFound.Count.ToString("N0")} files and {listPage.FoldersFound.Count.ToString("N0")} folders from list '{listPage.ListLoaded.Title}' on page {pageCount}...");
 
             allFolders.AddRange(listPage.FoldersFound);
 
@@ -43,7 +43,7 @@ public class DataCrawler<PAGETOKENTYPE>
         }
         if (pageCount > 1)
         {
-            _tracer.LogInformation($"List '{listPage.Title}' totals: {listResultsAll.FilesFound.Count.ToString("N0")} files in scope and {listResultsAll.FoldersFound.Count.ToString("N0")} folders");
+            _tracer.LogInformation($"List '{listPage.ListLoaded.Title}' totals: {listResultsAll.FilesFound.Count.ToString("N0")} files in scope and {listResultsAll.FoldersFound.Count.ToString("N0")} folders");
         }
 
         // Add unique folders

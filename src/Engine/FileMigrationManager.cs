@@ -53,4 +53,10 @@ public class FileCopyBatch
     public StartCopyRequest Request { get; set; } = null!;
 
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
+
+    internal string ToJson()
+    {
+        // Convert to json this object
+
+    }
 }

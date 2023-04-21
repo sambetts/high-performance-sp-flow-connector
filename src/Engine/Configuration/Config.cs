@@ -21,6 +21,8 @@ public class Config : BaseConfig
     [ConfigSection("AzureAd")]
     public AzureAdConfig AzureAdConfig { get; set; } = null!;
 
+    [ConfigValue]
+    public string QueueNameOperations { get; set; } = null!;
 
     [ConfigSection("ConnectionStrings")]
     public ConnectionStrings ConnectionStrings { get; set; } = null!;

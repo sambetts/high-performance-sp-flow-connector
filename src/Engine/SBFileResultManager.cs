@@ -1,10 +1,6 @@
-﻿using Azure.Core;
-using Azure.Identity;
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Engine.Configuration;
 using Engine.Core;
-using Engine.Models;
-using Engine.SharePoint;
 using Microsoft.Extensions.Logging;
 
 namespace Engine;
@@ -20,10 +16,13 @@ public class SBFileResultManager : IFileResultManager
         _logger = logger;
 
         var client = new ServiceBusClient(config.ConnectionStrings.ServiceBus);
-        _serviceBusSender = client.CreateSender("<QUEUE-NAME>");
+        _serviceBusSender = client.CreateSender(config.QueueNameOperations);
     }
 
     public async Task ProcessChunk(FileCopyBatch fileCopyBatch)
     {
+        var m = new ServiceBusMessage(fileCopyBatch.ToJson());
+        await _serviceBusSender.SendMessageAsync(m);
+        _logger.LogInformation($"Sent {fileCopyBatch.Files} file references to service bus to copy");
     }
 }

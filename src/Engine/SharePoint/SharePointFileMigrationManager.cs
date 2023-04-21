@@ -23,7 +23,7 @@ namespace Engine.SharePoint
 
             var sbSend = new SBFileResultManager(_config, _logger);
 
-            return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger));
+            return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
         }
     }
 }

@@ -29,7 +29,7 @@ namespace API.Controllers
                 return BadRequest();
             }
             var m = new SharePointFileMigrationManager(_config, _logger);
-            var r = await m.StartCopyAndSendToServiceBus(startCopyInfo);
+            await m.StartCopyAndSendToServiceBus(startCopyInfo);
 
             return Ok();
         }

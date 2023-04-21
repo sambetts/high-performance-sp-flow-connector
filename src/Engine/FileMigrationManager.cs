@@ -57,6 +57,7 @@ public class FileCopyBatch
     internal string ToJson()
     {
         // Convert to json this object
+        return System.Text.Json.JsonSerializer.Serialize(this);
 
     }
 }

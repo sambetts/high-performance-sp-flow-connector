@@ -16,8 +16,6 @@ public class Config : BaseConfig
     [ConfigValue(true)]
     public string AppInsightsInstrumentationKey { get; set; } = string.Empty;
 
-    public bool HaveAppInsightsConfigured => !string.IsNullOrEmpty(AppInsightsInstrumentationKey);
-
     [ConfigSection("AzureAd")]
     public AzureAdConfig AzureAdConfig { get; set; } = null!;
 

@@ -93,4 +93,19 @@ public static class CSOMExtensions
         throw new Exception($"Error executing CSOM request. {givingUpMsgBody}");
 
     }
+
+    public static async Task<Guid> SaveFile(this List targetList, BaseSharePointFileInfo fileInfo, ClientContext ctx, byte[] contents, ILogger debugTracer)
+    {
+        var fileCreationInfo = new FileCreationInformation
+        {
+            Content = contents,
+            Overwrite = true,
+            Url = fileInfo.ServerRelativeFilePath
+        };
+        var uploadFile = targetList.RootFolder.Files.Add(fileCreationInfo);
+        ctx.Load(uploadFile);
+        await ctx.ExecuteQueryAsyncWithThrottleRetries(debugTracer);
+
+        return uploadFile.UniqueId;
+    }
 }

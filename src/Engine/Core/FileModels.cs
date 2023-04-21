@@ -136,16 +136,11 @@ public class BaseSharePointFileInfo
 public class SharePointFileInfoWithList : BaseSharePointFileInfo
 {
     public SharePointFileInfoWithList() { }
-    public SharePointFileInfoWithList(DriveItemSharePointFileInfo driveArg) : base(driveArg)
-    {
-        this.List = driveArg.List;
-    }
 
     /// <summary>
     /// Parent list
     /// </summary>
     public SiteList List { get; set; } = new SiteList();
-
 }
 
 public class DriveItemSharePointFileInfo : SharePointFileInfoWithList
@@ -156,17 +151,11 @@ public class DriveItemSharePointFileInfo : SharePointFileInfoWithList
     public string GraphItemId { get; set; } = string.Empty;
 }
 
-public interface IListLoader<T>
-{
-    public Task<PageResponse<T>> GetListItems(T? token);
 
-    public string Title { get; set; }
-    public Guid ListId { get; set; }
-}
-
-public class PageResponse<T> : DocLibCrawlContents
+public class DocLibCrawlContentsPageResponse<PAGETOKENTYPE> : DocLibCrawlContents
 {
-    public T? NextPageToken { get; set; } = default(T);
+    public PAGETOKENTYPE? NextPageToken { get; set; } = default(PAGETOKENTYPE);
+    public string Title { get; set; } = null!;
 }
 
 public class DocLibCrawlContents

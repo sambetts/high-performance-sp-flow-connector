@@ -1,4 +1,6 @@
-﻿using Engine.Configuration;
+﻿using Engine.Code;
+using Engine.Configuration;
+using Engine.Core;
 using Engine.Models;
 using Engine.SharePoint;
 using Engine.Utils;
@@ -18,7 +20,7 @@ public class FileMigrationStartManager
         _logger = logger;
     }
 
-    public async Task<List<SharePointFileInfoWithList>> StartCopy(StartCopyRequest startCopyInfo, IFileResultManager chunkProcessor)
+    public async Task<List<SharePointFileInfoWithList>> StartCopy<PAGETOKENTYPE>(StartCopyRequest startCopyInfo, IListLoader<PAGETOKENTYPE> listLoader, IFileResultManager chunkProcessor)
     {
         // Parse command into usable objects
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
@@ -27,12 +29,10 @@ public class FileMigrationStartManager
         var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentSite, _logger);
         var spClient = await sourceTokenManager.GetOrRefreshContext();
 
-        var lists = await GetSourceAndDestinationLists(sourceInfo, destInfo, spClient);
-
         // Get source files
-        var crawler = new SiteListsAndLibrariesCrawler<ListItemCollectionPosition>(_logger);
-        var sourceFiles = await crawler.CrawlList(new SPOListLoader(lists.Item1, sourceTokenManager, _logger), null);
-        _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files in list '{lists.Item1.Title}'.");
+        var crawler = new DataCrawler<PAGETOKENTYPE>(_logger);
+        var sourceFiles = await crawler.CrawlList(listLoader);
+        //_logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files in list '{lists.Item1.Title}'.");
 
         // Push to queue in batches
         var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
@@ -53,37 +53,6 @@ public class FileMigrationStartManager
         await fileListProcessor.Copy(batch);
         _logger.LogInformation($"Copied {batch.Files.Count} files.");
     }
-    async Task<(List, List)> GetSourceAndDestinationLists(CopyInfo sourceInfo, CopyInfo destInfo, ClientContext spClient)
-    {
-
-        var sourceList = spClient.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(sourceInfo.ListUrl));
-        try
-        {
-            spClient.Load(sourceList, l => l.Id, l => l.Title);
-            await spClient.ExecuteQueryAsyncWithThrottleRetries(_logger);
-        }
-        catch (System.Net.WebException ex)
-        {
-            _logger.LogError($"Got exception '{ex.Message}' loading data for source list URL '{sourceInfo.ListUrl}'.");
-            throw;
-        }
-        await spClient.ExecuteQueryAsyncWithThrottleRetries(_logger);
-
-        var destList = spClient.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(destInfo.ListUrl));
-        try
-        {
-            spClient.Load(destList, l => l.Id, l => l.Title);
-            await spClient.ExecuteQueryAsyncWithThrottleRetries(_logger);
-        }
-        catch (System.Net.WebException ex)
-        {
-            _logger.LogError($"Got exception '{ex.Message}' loading data for destination list URL '{destInfo.ListUrl}'.");
-            throw;
-        }
-        await spClient.ExecuteQueryAsyncWithThrottleRetries(_logger);
-
-        return (sourceList, destList);
-    }
 }
 
 public class FileCopyBatch
@@ -93,10 +62,6 @@ public class FileCopyBatch
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
 }
 
-public interface IFileListProcessor
-{
-    Task Copy(FileCopyBatch batch);
-}
 public class SharePointFileListProcessor : IFileListProcessor
 {
     public Task Copy(FileCopyBatch batch)

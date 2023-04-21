@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Engine.Core;
+using Engine.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.SharePoint.Client;
 
 namespace Engine.SharePoint;
@@ -6,27 +8,40 @@ namespace Engine.SharePoint;
 public class SPOListLoader : IListLoader<ListItemCollectionPosition>
 {
     private List? _listDef = null;
-    private readonly List _list;
+    private readonly Guid _listId;
     private readonly SPOTokenManager _tokenManager;
     private readonly ILogger _logger;
 
-    public SPOListLoader(List list, SPOTokenManager tokenManager, ILogger logger)
+    public SPOListLoader(Guid listId, SPOTokenManager tokenManager, ILogger logger)
     {
-        this.ListId = list.Id;
-        this.Title = list.Title;
-        _list = list;
+        _listId = listId;
         _tokenManager = tokenManager;
         _logger = logger;
     }
-    public string Title { get; set; }
-    public Guid ListId { get; set; }
 
-    public async Task<PageResponse<ListItemCollectionPosition>> GetListItems(ListItemCollectionPosition? position)
+    public async static Task<Guid> GetList(CopyInfo sourceInfo, ClientContext spClient, ILogger logger)
+    {
+        var sourceList = spClient.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(sourceInfo.ListUrl));
+        try
+        {
+            spClient.Load(sourceList, l => l.Id, l => l.Title);
+            await spClient.ExecuteQueryAsyncWithThrottleRetries(logger);
+        }
+        catch (System.Net.WebException ex)
+        {
+            logger.LogError($"Got exception '{ex.Message}' loading data for source list URL '{sourceInfo.ListUrl}'.");
+            throw;
+        }
+
+        return sourceList.Id;
+    }
+
+    public async Task<DocLibCrawlContentsPageResponse<ListItemCollectionPosition>> GetListItemsPage(ListItemCollectionPosition? position)
     {
         SiteList? listModel = null;
-        var pageResults = new PageResponse<ListItemCollectionPosition>();
+        var pageResults = new DocLibCrawlContentsPageResponse<ListItemCollectionPosition>();
 
-        // List get-all query
+        // List get-all query, RecursiveAll
         var camlQuery = new CamlQuery();
         camlQuery.ViewXml = "<View Scope=\"RecursiveAll\"><Query>" +
             "<OrderBy><FieldRef Name='ID' Ascending='TRUE'/></OrderBy></Query>" +
@@ -37,13 +52,13 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         ListItemCollection listItems = null!;
         camlQuery.ListItemCollectionPosition = position;
 
-        // For large lists, make sure we refresh the context when the token expires.
+        // For large lists, make sure we refresh the context when the token expires. Do it for each page.
         var spClientList = await _tokenManager.GetOrRefreshContext(() => _listDef = null);
 
         // Load list definition
         if (_listDef == null)
         {
-            _listDef = spClientList.Web.Lists.GetById(this.ListId);
+            _listDef = spClientList.Web.Lists.GetById(_listId);
             spClientList.Load(_listDef, l => l.BaseType, l => l.ItemCount, l => l.RootFolder, list => list.Title);
             await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
         }
@@ -133,7 +148,6 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
 
         return pageResults;
     }
-
 
     /// <summary>
     /// Process a single document library item.

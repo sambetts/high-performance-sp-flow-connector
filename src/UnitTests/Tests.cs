@@ -35,7 +35,7 @@ public class Tests
 
         var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
                        "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
-        var r = await m.StartCopy(copyCfg, new FakeChunkManager());
+        var r = await m.StartCopy(copyCfg, new FakeLoader(), new FakeChunkManager());
         Assert.IsNotNull(r);
 
         await m.MakeCopy(new FileCopyBatch { Files = r, Request = copyCfg }, new FakeFileListProcessor());
@@ -50,6 +50,6 @@ public class Tests
         var invalidCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", 
                        "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
 
-        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await m.StartCopy(invalidCfg, new FakeChunkManager()));
+        await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await m.StartCopy(invalidCfg, new FakeLoader(), new FakeChunkManager()));
     }
 }

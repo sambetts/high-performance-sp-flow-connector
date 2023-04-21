@@ -1,4 +1,5 @@
 ﻿using Engine.Configuration;
+using Engine.Core;
 using Engine.Models;
 using Engine.SharePoint;
 using Microsoft.Extensions.Logging;
@@ -19,9 +20,4 @@ public class SBFileResultManager : IFileResultManager
     public async Task ProcessChunk(FileCopyBatch fileCopyBatch)
     {
     }
-}
-
-public interface IFileResultManager
-{
-    Task ProcessChunk(FileCopyBatch fileCopyBatch);
 }

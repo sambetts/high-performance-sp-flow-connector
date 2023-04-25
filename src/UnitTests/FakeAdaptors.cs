@@ -6,7 +6,7 @@ namespace UnitTests;
 
 public class FakeFileListProcessor : IFileListProcessor
 {
-    public Task Copy(FileCopyBatch batch)
+    public Task CopyToDestination(FileCopyBatch batch)
     {
         return Task.CompletedTask;
     }

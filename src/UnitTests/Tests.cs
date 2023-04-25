@@ -44,19 +44,19 @@ public class Tests
 #if DEBUG
     [TestMethod]
 #endif
-    public async Task SpoAndServiceBusFileMigrationManagerTests()
+    public async Task SharePointFileMigrationManagerAndSharePointFileListProcessorTests()
     {
 
-        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/",
+        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/1",
                        "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
 
         var m = new SharePointFileMigrationManager(copyCfg.CurrentSite, _config, _logger);
         var r = await m.StartCopyAndSendToServiceBus(copyCfg);
         Assert.IsNotNull(r);
 
-        await m.MakeCopy(new FileCopyBatch { Files = r, Request = copyCfg });
+        var fileCopier = new SharePointFileListProcessor(_config, _logger);
+        await fileCopier.CopyToDestination(new FileCopyBatch { Files = r, Request = copyCfg });
     }
-
 
     [TestMethod]
     public async Task FileMigrationManagerInvalidArgTests()

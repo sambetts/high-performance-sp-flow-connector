@@ -9,7 +9,7 @@ public interface IListLoader<PAGETOKENTYPE>
 }
 public interface IFileListProcessor
 {
-    Task Copy(FileCopyBatch batch);
+    Task CopyToDestination(FileCopyBatch batch);
 }
 
 public interface IFileResultManager

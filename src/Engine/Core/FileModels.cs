@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+﻿using Engine.Models;
+using Engine.Utils;
+using System.Text.Json.Serialization;
 
 namespace Engine.SharePoint;
 
@@ -141,6 +143,94 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
     /// Parent list
     /// </summary>
     public SiteList List { get; set; } = new SiteList();
+
+    public bool ValidFor(StartCopyRequest copyCfg)
+    {
+        if (copyCfg is null)
+        {
+            throw new ArgumentNullException(nameof(copyCfg));
+        }
+
+        var fullSourceUrl = copyCfg.CurrentSite + copyCfg.RelativeUrlToCopy;
+
+        if (!this.FullSharePointUrl.StartsWith(fullSourceUrl))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public SharePointFileInfoWithList From(StartCopyRequest copyCfg)
+    {
+        if (copyCfg is null)
+        {
+            throw new ArgumentNullException(nameof(copyCfg));
+        }
+
+        if (!ValidFor(copyCfg))
+        {
+            throw new ArgumentOutOfRangeException(nameof(copyCfg), "Out of scope");
+        }
+
+        var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(ServerRelativeFilePath);
+
+        var url = copyCfg.RelativeUrlToCopy;
+        if (!url.EndsWith("/"))
+        {
+            url += "/";
+        }
+        var sourceFileName = url + thisFileInfo.FileName;
+        var siteRootMinusFilePath = ServerRelativeFilePath.TrimStringFromEnd(sourceFileName);
+        var destinationServerRelativeFilePath = $"{siteRootMinusFilePath}{copyCfg.RelativeUrlDestination}/{thisFileInfo.FileName}";
+
+
+        var newCopyFile = new SharePointFileInfoWithList
+        {
+            SiteUrl = this.SiteUrl,
+            WebUrl = this.WebUrl,
+            ServerRelativeFilePath = destinationServerRelativeFilePath,
+            Author = this.Author,
+            Subfolder = this.Subfolder,
+            LastModified = this.LastModified,
+            FileSize = this.FileSize,
+            List = this.List
+        };
+
+        if (!newCopyFile.FullSharePointUrl.StartsWith(copyCfg.DestinationSite))
+        {
+            throw new ArgumentOutOfRangeException($"This file {FullSharePointUrl} does not exist in source {copyCfg.CurrentSite}");
+        }
+
+        return newCopyFile;
+    }
+}
+
+public class ServerRelativeFilePathInfo
+{
+    public static ServerRelativeFilePathInfo FromServerRelativeFilePath(string serverRelativeFilePath)
+    {
+        if (string.IsNullOrEmpty(serverRelativeFilePath))
+        {
+            throw new ArgumentException($"'{nameof(serverRelativeFilePath)}' cannot be null or empty.", nameof(serverRelativeFilePath));
+        }
+        if (!serverRelativeFilePath.EndsWith("/"))
+        {
+            var lastSlash = serverRelativeFilePath.LastIndexOf('/');
+            if (lastSlash != -1)
+            {
+                var i = new ServerRelativeFilePathInfo();
+                i.FolderPath = serverRelativeFilePath.Substring(0, lastSlash);
+                i.FileName = serverRelativeFilePath.Substring(lastSlash + 1, serverRelativeFilePath.Length - lastSlash - 1);
+
+                return i;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException($"Invalid {serverRelativeFilePath}");
+    }
+
+    public string FileName { get; set; } = string.Empty;
+    public string FolderPath { get; set; } = string.Empty;
 }
 
 public class DriveItemSharePointFileInfo : SharePointFileInfoWithList

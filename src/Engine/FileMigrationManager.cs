@@ -10,6 +10,7 @@ namespace Engine;
 public class FileMigrationManager
 {
     protected readonly ILogger _logger;
+    const int MAX_FILES_PER_BATCH = 100;
 
     public FileMigrationManager(ILogger logger)
     {
@@ -28,7 +29,7 @@ public class FileMigrationManager
         _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files.");
 
         // Push to queue in batches
-        var l = new ListBatchProcessor<SharePointFileInfoWithList>(1000, async (List<SharePointFileInfoWithList> chunk) => 
+        var l = new ListBatchProcessor<SharePointFileInfoWithList>(MAX_FILES_PER_BATCH, async (List<SharePointFileInfoWithList> chunk) => 
         {
             // Create a new class to process each chunk and send to service bus
             await chunkProcessor.ProcessChunk(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
@@ -43,7 +44,7 @@ public class FileMigrationManager
 
     public async Task MakeCopy(FileCopyBatch batch, IFileListProcessor fileListProcessor)
     {
-        await fileListProcessor.Copy(batch);
+        await fileListProcessor.CopyToDestination(batch);
         _logger.LogInformation($"Copied {batch.Files.Count} files.");
     }
 }

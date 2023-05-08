@@ -7,23 +7,23 @@ namespace Engine.SharePoint;
 public class SharePointFileMigrationManager : FileMigrationManager
 {
     private readonly Config _config;
-    private readonly SPOTokenManager _tokenManager;
-    public SharePointFileMigrationManager(string siteUrl, Config config, ILogger logger) : base(logger)
+    private readonly SPOTokenManager _sourceTokenManager;
+    public SharePointFileMigrationManager(string sourceSiteUrl, Config config, ILogger logger) : base(logger)
     {
         _config = config;
-        _tokenManager = new SPOTokenManager(_config, siteUrl, _logger);
+        _sourceTokenManager = new SPOTokenManager(_config, sourceSiteUrl, _logger);
     }
 
     public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendToServiceBus(StartCopyRequest startCopyInfo)
     {
-        var spClient = await _tokenManager.GetOrRefreshContext();
+        var spClient = await _sourceTokenManager.GetOrRefreshContext();
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
 
         var guid = await SPOListLoader.GetListId(sourceInfo, spClient, _logger);
 
         var sbSend = new SBFileResultManager(_config, _logger);
 
-        return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, _tokenManager, _logger), sbSend);
+        return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, _sourceTokenManager, _logger), sbSend);
     }
 
 

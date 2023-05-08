@@ -28,7 +28,7 @@ namespace API.Controllers
             {
                 return BadRequest();
             }
-            var m = new SharePointFileMigrationManager(_config, _logger);
+            var m = new SharePointFileMigrationManager(startCopyInfo.CurrentSite, _config, _logger);
             await m.StartCopyAndSendToServiceBus(startCopyInfo);
 
             return Ok();

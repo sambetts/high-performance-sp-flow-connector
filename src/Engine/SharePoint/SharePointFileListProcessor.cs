@@ -24,29 +24,66 @@ public class SharePointFileListProcessor : IFileListProcessor
         var app = await AuthUtils.GetNewClientApp(_config);
         var downloader = new SharePointFileDownloader(app, _config, _logger);
 
-        foreach (var fileToCopy in batch.Files)
+        await CopyFiles(downloader, clientDest, batch.Files, batch.Request);
+        
+    }
+
+    private async Task CopyFiles(SharePointFileDownloader downloader, ClientContext clientDest, List<SharePointFileInfoWithList> files, Models.StartCopyRequest request)
+    {
+        foreach (var fileToCopy in files)
         {
             using (var sourceFileStream = await downloader.DownloadAsStream(fileToCopy))
             {
-                var destFileInfo = fileToCopy.From(batch.Request);
+                var destFileInfo = fileToCopy.From(request);
                 var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
 
                 var list = clientDest.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(destFileInfo.List.ServerRelativeUrl));
                 clientDest.Load(list);
+                clientDest.Load(list, l=> l.RootFolder.ServerRelativeUrl);
                 await clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
 
-                var folder = await CreateFolder(list, thisFileInfo.FolderPath, clientDest);
+                var rootFolderName = thisFileInfo.FolderPath.TrimStringFromStart(list.RootFolder.ServerRelativeUrl);
+                var folder = await CreateFolder(list, rootFolderName, clientDest);
 
-                var newItemCreateInfo = new FileCreationInformation()
+                var fileName = thisFileInfo.FileName;
+                var retry = true;
+                var retryCount = 0; 
+                while (retry)
                 {
-                    Content = ReadFully(sourceFileStream),
-                    Url = thisFileInfo.FileName,
-                };
-                var oListItem = folder.Files.Add(newItemCreateInfo);
-                oListItem.Update();
+                    var newItemCreateInfo = new FileCreationInformation()
+                    {
+                        Content = ReadFully(sourceFileStream),
+                        Url = fileName,
+                        Overwrite = request.ConflictResolution == Models.ConflictResolution.Replace
+                    };
+                    var newListItem = folder.Files.Add(newItemCreateInfo);
+                    newListItem.Update();
 
-                await clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                    try
+                    {
+                        await clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                        retry = false;
+                    }
+                    catch (ServerException ex) when (ex.Message.Contains("already exists"))
+                    {
+                        if (request.ConflictResolution == Models.ConflictResolution.NewDesintationName)
+                        {
+                            retryCount++;
+                            retry = true;
 
+
+                            var fi = new FileInfo(fileName);
+
+                            // Build new name & try again
+                            fileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
+                        }
+                        else
+                        {
+                            // Fail
+                            throw;
+                        }
+                    }
+                }
             }
         }
     }
@@ -54,7 +91,7 @@ public class SharePointFileListProcessor : IFileListProcessor
     static byte[] ReadFully(Stream input)
     {
         byte[] buffer = new byte[16 * 1024];
-        using (MemoryStream ms = new MemoryStream())
+        using (var ms = new MemoryStream())
         {
             int read;
             while ((read = input.Read(buffer, 0, buffer.Length)) > 0)

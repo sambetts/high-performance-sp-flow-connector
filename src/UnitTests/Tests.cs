@@ -1,9 +1,12 @@
 using Engine;
+using Engine.Code;
 using Engine.Configuration;
 using Engine.Models;
 using Engine.SharePoint;
+using Engine.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.SharePoint.Client;
 
 namespace UnitTests;
 
@@ -48,14 +51,17 @@ public class Tests
     {
 
         var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/1",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.NewDesintationName);
 
-        var m = new SharePointFileMigrationManager(copyCfg.CurrentSite, _config, _logger);
-        var r = await m.StartCopyAndSendToServiceBus(copyCfg);
-        Assert.IsNotNull(r);
+        var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentSite, _logger, null);
+        var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentSite, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
+        var sourceCrawler = new DataCrawler<ListItemCollectionPosition>(_logger);
+        var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentSite, _logger);
+
+        var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
 
         var fileCopier = new SharePointFileListProcessor(_config, _logger);
-        await fileCopier.CopyToDestination(new FileCopyBatch { Files = r, Request = copyCfg });
+        await fileCopier.CopyToDestination(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg });
     }
 
     [TestMethod]

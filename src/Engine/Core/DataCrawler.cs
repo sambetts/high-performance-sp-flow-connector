@@ -16,7 +16,7 @@ public class DataCrawler<PAGETOKENTYPE>
         _tracer = tracer;
     }
 
-    public async Task<DocLibCrawlContents> CrawlListAllPages(IListLoader<PAGETOKENTYPE> listLoader)
+    public async Task<DocLibCrawlContents> CrawlListAllPages(IListLoader<PAGETOKENTYPE> listLoader, string fromPath)
     {
         DocLibCrawlContentsPageResponse<PAGETOKENTYPE>? listPage = null;
 
@@ -28,7 +28,7 @@ public class DataCrawler<PAGETOKENTYPE>
         int pageCount = 1;
         while (listPage == null || listPage.NextPageToken != null)
         {
-            listPage = await listLoader.GetListItemsPage(token);
+            listPage = await listLoader.GetListItemsPage(token, fromPath);
             token = listPage.NextPageToken;
 
             foreach (var file in listPage.FilesFound)

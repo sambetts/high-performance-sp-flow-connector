@@ -4,7 +4,7 @@ namespace Engine.Core;
 
 public interface IListLoader<PAGETOKENTYPE>
 {
-    public Task<DocLibCrawlContentsPageResponse<PAGETOKENTYPE>> GetListItemsPage(PAGETOKENTYPE? token);
+    public Task<DocLibCrawlContentsPageResponse<PAGETOKENTYPE>> GetListItemsPage(PAGETOKENTYPE? token, string fromPath);
 
 }
 public interface IFileListProcessor

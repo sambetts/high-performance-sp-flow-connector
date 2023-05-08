@@ -25,7 +25,7 @@ public class FileMigrationManager
 
         // Get source files
         var crawler = new DataCrawler<PAGETOKENTYPE>(_logger);
-        var sourceFiles = await crawler.CrawlListAllPages(listLoader);
+        var sourceFiles = await crawler.CrawlListAllPages(listLoader, startCopyInfo.RelativeUrlToCopy);
         _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files.");
 
         // Push to queue in batches

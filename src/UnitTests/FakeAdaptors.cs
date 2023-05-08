@@ -25,7 +25,7 @@ public class FakeLoader : IListLoader<string>
     public string Title { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public Guid ListId { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-    public Task<DocLibCrawlContentsPageResponse<string>> GetListItemsPage(string? token)
+    public Task<DocLibCrawlContentsPageResponse<string>> GetListItemsPage(string? token, string fromPath)
     {
         var list = new SiteList { Title = "Shared Documents" };
         return Task.FromResult(new DocLibCrawlContentsPageResponse<string>

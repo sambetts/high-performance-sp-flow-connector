@@ -39,16 +39,19 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         return sourceList.Id;
     }
 
-    public async Task<DocLibCrawlContentsPageResponse<ListItemCollectionPosition>> GetListItemsPage(ListItemCollectionPosition? position)
+    public async Task<DocLibCrawlContentsPageResponse<ListItemCollectionPosition>> GetListItemsPage(ListItemCollectionPosition? position, string fromPath)
     {
         SiteList? listModel = null;
         var pageResults = new DocLibCrawlContentsPageResponse<ListItemCollectionPosition>();
 
-        // List get-all query, RecursiveAll
+        // List get-all query, RecursiveAll. We can't filter by FileDirRef as that causes throttling errors (FFS!)
         var camlQuery = new CamlQuery();
-        camlQuery.ViewXml = "<View Scope=\"RecursiveAll\"><Query>" +
-            "<OrderBy><FieldRef Name='ID' Ascending='TRUE'/></OrderBy></Query>" +
-            "<RowLimit Paged=\"TRUE\">5000</RowLimit>" +
+        camlQuery.ViewXml = 
+            "<View Scope=\"RecursiveAll\">" +
+                "<Query>" +
+                    "<OrderBy><FieldRef Name='ID' Ascending='TRUE'/></OrderBy>" +
+                "</Query>" +
+                "<RowLimit Paged=\"TRUE\">5000</RowLimit>" +
             "</View>";
 
         // Large-list support & paging
@@ -113,6 +116,8 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         // Remember position, if more than 5000 items are in the list
         pageResults.NextPageToken = listItems.ListItemCollectionPosition;
 
+        var rootFolderPath = spClientList.Web.Url + fromPath;
+
         foreach (var item in listItems)
         {
             var contentTypeId = item.FieldValues["ContentTypeId"]?.ToString();
@@ -139,7 +144,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
                 }
 
                 foundFileInfo = ProcessDocLibItem(item, listModel, spClientList);
-                if (foundFileInfo != null)
+                if (foundFileInfo != null && foundFileInfo.FullSharePointUrl.StartsWith(rootFolderPath))
                 {
                     pageResults.FilesFound.Add(foundFileInfo!);
                 }

@@ -190,7 +190,7 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
         var subString = string.Empty;
         if (!string.IsNullOrEmpty(this.Subfolder))
         {
-            subString = "/" + this.Subfolder + "/";
+            subString = this.Subfolder + "/";
         }
         var sourceFileNameFull = $"{sourceUrl}{subString}{thisFileInfo.FileName}";
         var siteRootMinusFilePath = ServerRelativeFilePath.TrimStringFromEnd(sourceFileNameFull);

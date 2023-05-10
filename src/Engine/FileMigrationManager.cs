@@ -20,8 +20,8 @@ public class FileMigrationManager
     public async Task<List<SharePointFileInfoWithList>> StartCopy<PAGETOKENTYPE>(StartCopyRequest startCopyInfo, IListLoader<PAGETOKENTYPE> listLoader, IFileResultManager chunkProcessor)
     {
         // Parse command into usable objects
-        var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
-        var destInfo = new CopyInfo(startCopyInfo.DestinationSite, startCopyInfo.RelativeUrlDestination);
+        var sourceInfo = new CopyInfo(startCopyInfo.CurrentWebUrl, startCopyInfo.RelativeUrlToCopy);
+        var destInfo = new CopyInfo(startCopyInfo.DestinationWebUrl, startCopyInfo.RelativeUrlDestination);
 
         // Get source files
         var crawler = new DataCrawler<PAGETOKENTYPE>(_logger);

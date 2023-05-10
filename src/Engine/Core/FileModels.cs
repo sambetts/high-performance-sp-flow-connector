@@ -151,7 +151,7 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
             throw new ArgumentNullException(nameof(copyCfg));
         }
 
-        var fullSourceUrl = copyCfg.CurrentSite + copyCfg.RelativeUrlToCopy;
+        var fullSourceUrl = copyCfg.CurrentWebUrl + copyCfg.RelativeUrlToCopy;
 
         if (!this.FullSharePointUrl.StartsWith(fullSourceUrl))
         {
@@ -160,7 +160,11 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
         return true;
     }
 
-    public SharePointFileInfoWithList From(StartCopyRequest copyCfg)
+    /// <summary>
+    /// Convert to a destination SharePointFileInfoWithList using supplied copy request info.
+    /// Only supports same site collection as the copy info has no property for site URL.
+    /// </summary>
+    public SharePointFileInfoWithList ConvertFromForSameSiteCollection(StartCopyRequest copyCfg)
     {
         if (copyCfg is null)
         {
@@ -174,20 +178,29 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
 
         var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(ServerRelativeFilePath);
 
-        var url = copyCfg.RelativeUrlToCopy;
-        if (!url.EndsWith("/"))
+        // Figure out site collection relative URL (i.e '/sites/Files').
+
+        // Build source URL from relative source URL and file name
+        var sourceUrl = copyCfg.RelativeUrlToCopy;
+        if (!sourceUrl.EndsWith("/"))
         {
-            url += "/";
+            sourceUrl += "/";
         }
-        var sourceFileName = url + thisFileInfo.FileName;
-        var siteRootMinusFilePath = ServerRelativeFilePath.TrimStringFromEnd(sourceFileName);
+
+        var subString = string.Empty;
+        if (!string.IsNullOrEmpty(this.Subfolder))
+        {
+            subString = "/" + this.Subfolder + "/";
+        }
+        var sourceFileNameFull = $"{sourceUrl}{subString}{thisFileInfo.FileName}";
+        var siteRootMinusFilePath = ServerRelativeFilePath.TrimStringFromEnd(sourceFileNameFull);
         var destinationServerRelativeFilePath = $"{siteRootMinusFilePath}{copyCfg.RelativeUrlDestination}/{thisFileInfo.FileName}";
 
 
         var newCopyFile = new SharePointFileInfoWithList
         {
             SiteUrl = this.SiteUrl,
-            WebUrl = this.WebUrl,
+            WebUrl = copyCfg.DestinationWebUrl,
             ServerRelativeFilePath = destinationServerRelativeFilePath,
             Author = this.Author,
             Subfolder = this.Subfolder,
@@ -196,9 +209,9 @@ public class SharePointFileInfoWithList : BaseSharePointFileInfo
             List = this.List
         };
 
-        if (!newCopyFile.FullSharePointUrl.StartsWith(copyCfg.DestinationSite))
+        if (!newCopyFile.FullSharePointUrl.StartsWith(copyCfg.DestinationWebUrl))
         {
-            throw new ArgumentOutOfRangeException($"This file {FullSharePointUrl} does not exist in source {copyCfg.CurrentSite}");
+            throw new ArgumentOutOfRangeException($"This file {FullSharePointUrl} does not exist in source {copyCfg.CurrentWebUrl}");
         }
 
         return newCopyFile;

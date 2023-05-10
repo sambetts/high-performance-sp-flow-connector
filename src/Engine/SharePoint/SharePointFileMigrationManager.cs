@@ -17,7 +17,7 @@ public class SharePointFileMigrationManager : FileMigrationManager
     public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendToServiceBus(StartCopyRequest startCopyInfo)
     {
         var spClient = await _sourceTokenManager.GetOrRefreshContext();
-        var sourceInfo = new CopyInfo(startCopyInfo.CurrentSite, startCopyInfo.RelativeUrlToCopy);
+        var sourceInfo = new CopyInfo(startCopyInfo.CurrentWebUrl, startCopyInfo.RelativeUrlToCopy);
 
         var guid = await SPOListLoader.GetListId(sourceInfo, spClient, _logger);
 

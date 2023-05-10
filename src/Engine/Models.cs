@@ -3,7 +3,7 @@
 /// <summary>
 /// From Flow inputs
 /// </summary>
-public record StartCopyRequest(string CurrentSite, string RelativeUrlToCopy, string DestinationSite, string RelativeUrlDestination, ConflictResolution ConflictResolution);
+public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution);
 
 /// <summary>
 /// Data CSOM can use

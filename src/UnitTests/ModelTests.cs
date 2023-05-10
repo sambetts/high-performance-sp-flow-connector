@@ -77,21 +77,21 @@ public class ModelTests
     public void SharePointFileInfoWithListCopyTests()
     {
         // Valid test
-        var copyCfg1 = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/",
+        var copyCfg1 = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/Source",
                        "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
 
-        var file1 = new SharePointFileInfoWithList
+        var sourceFile = new SharePointFileInfoWithList
         {
-            List = new SiteList { ServerRelativeUrl = "/list1" },
+            List = new SiteList { ServerRelativeUrl = "/Shared Documents" },
             Author = "Whoever",
             FileSize = 100,
             LastModified = DateTime.UtcNow,
             SiteUrl = "https://m365x72460609.sharepoint.com/sites/Files/",
             WebUrl = "https://m365x72460609.sharepoint.com/sites/Files",
-            ServerRelativeFilePath = "/sites/Files/Shared Documents/Contoso.pptx"
+            ServerRelativeFilePath = "/sites/Files/Shared Documents/Source/Contoso.pptx"
         };
 
-        var file2 = file1.From(copyCfg1);
+        var file2 = sourceFile.ConvertFromForSameSiteCollection(copyCfg1);
         Assert.IsTrue(file2.FullSharePointUrl == "https://m365x72460609.sharepoint.com/sites/Files/Shared Documents/FlowCopy/Contoso.pptx");
 
 
@@ -108,7 +108,7 @@ public class ModelTests
             ServerRelativeFilePath = "/sites/Files/Shared Documents/Contoso.pptx"
         };
 
-        var file2NoTrailingSlash = file1NoTrailingSlash.From(copyCfgNoTrailingSlash);
+        var file2NoTrailingSlash = file1NoTrailingSlash.ConvertFromForSameSiteCollection(copyCfgNoTrailingSlash);
         Assert.IsTrue(file2NoTrailingSlash.FullSharePointUrl == "https://m365x72460609.sharepoint.com/sites/Files/Shared Documents/FlowCopy/Contoso.pptx");
 
 
@@ -124,7 +124,7 @@ public class ModelTests
             ServerRelativeFilePath = "/sites/Other/Shared Documents/Contoso.pptx"
         };
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => fileOutOfScope.From(copyCfg1));
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => fileOutOfScope.ConvertFromForSameSiteCollection(copyCfg1));
     }
 
 }

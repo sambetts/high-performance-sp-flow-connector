@@ -18,7 +18,7 @@ public class SharePointFileListProcessor : IFileListProcessor
     }
     public async Task CopyToDestination(FileCopyBatch batch)
     {
-        var tokenManagerDestSite = new SPOTokenManager(_config, batch.Request.DestinationSite, _logger);
+        var tokenManagerDestSite = new SPOTokenManager(_config, batch.Request.DestinationWebUrl, _logger);
         var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
 
         var app = await AuthUtils.GetNewClientApp(_config);
@@ -34,7 +34,7 @@ public class SharePointFileListProcessor : IFileListProcessor
         {
             using (var sourceFileStream = await downloader.DownloadAsStream(fileToCopy))
             {
-                var destFileInfo = fileToCopy.From(request);
+                var destFileInfo = fileToCopy.ConvertFromForSameSiteCollection(request);
                 var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
 
                 var list = clientDest.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(destFileInfo.List.ServerRelativeUrl));

@@ -50,13 +50,13 @@ public class Tests
     public async Task SharePointFileMigrationManagerAndSharePointFileListProcessorTests()
     {
 
-        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/1",
+        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents",
                        "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.NewDesintationName);
 
-        var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentSite, _logger, null);
-        var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentSite, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
+        var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentWebUrl, _logger, null);
+        var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentWebUrl, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
         var sourceCrawler = new DataCrawler<ListItemCollectionPosition>(_logger);
-        var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentSite, _logger);
+        var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentWebUrl, _logger);
 
         var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
 

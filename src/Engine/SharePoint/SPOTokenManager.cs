@@ -16,9 +16,14 @@ public class SPOTokenManager
 
     public SPOTokenManager(Config config, string siteUrl, ILogger tracer)
     {
-        _config = config;
+        if (string.IsNullOrEmpty(siteUrl))
+        {
+            throw new ArgumentException($"'{nameof(siteUrl)}' cannot be null or empty.", nameof(siteUrl));
+        }
+
+        _config = config ?? throw new ArgumentNullException(nameof(config));
         _siteUrl = siteUrl;
-        _tracer = tracer;
+        _tracer = tracer ?? throw new ArgumentNullException(nameof(tracer));
     }
     public async Task<ClientContext> GetOrRefreshContext()
     {

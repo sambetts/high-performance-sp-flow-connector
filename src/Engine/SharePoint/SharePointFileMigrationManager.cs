@@ -4,26 +4,25 @@ using Microsoft.Extensions.Logging;
 
 namespace Engine.SharePoint;
 
-public class SharePointFileMigrationManager : FileMigrationManager
+public class SharePointFileMigrationManager<T> : FileMigrationManager
 {
     private readonly Config _config;
-    private readonly SPOTokenManager _sourceTokenManager;
-    public SharePointFileMigrationManager(string sourceSiteUrl, Config config, ILogger logger) : base(logger)
+    public SharePointFileMigrationManager(Config config, ILogger<T> logger) : base(logger)
     {
         _config = config;
-        _sourceTokenManager = new SPOTokenManager(_config, sourceSiteUrl, _logger);
     }
 
     public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendToServiceBus(StartCopyRequest startCopyInfo)
     {
-        var spClient = await _sourceTokenManager.GetOrRefreshContext();
+        var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentWebUrl, _logger);
+        var spClient = await sourceTokenManager.GetOrRefreshContext();
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentWebUrl, startCopyInfo.RelativeUrlToCopy);
 
         var guid = await SPOListLoader.GetListId(sourceInfo, spClient, _logger);
 
         var sbSend = new SBFileResultManager(_config, _logger);
 
-        return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, _sourceTokenManager, _logger), sbSend);
+        return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
     }
 
 

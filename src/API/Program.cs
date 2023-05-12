@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 var config = new Config(builder.Configuration);
 builder.Services.AddSingleton(config);
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"))
-        .EnableTokenAcquisitionToCallDownstreamApi()
-            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
-            .AddInMemoryTokenCaches();
+//builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"))
+//        .EnableTokenAcquisitionToCallDownstreamApi()
+//            .AddMicrosoftGraph(builder.Configuration.GetSection("MicrosoftGraph"))
+//            .AddInMemoryTokenCaches();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

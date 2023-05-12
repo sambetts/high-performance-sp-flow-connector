@@ -30,6 +30,8 @@ public class SharePointFileListProcessor : IFileListProcessor
 
     private async Task CopyFiles(SharePointFileDownloader downloader, ClientContext clientDest, List<SharePointFileInfoWithList> files, Models.StartCopyRequest request)
     {
+        var listCache = new ListCache(clientDest, _logger);
+        var folderCache = new FolderCache(clientDest, _logger);
         foreach (var fileToCopy in files)
         {
             using (var sourceFileStream = await downloader.DownloadAsStream(fileToCopy))
@@ -37,13 +39,12 @@ public class SharePointFileListProcessor : IFileListProcessor
                 var destFileInfo = fileToCopy.ConvertFromForSameSiteCollection(request);
                 var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
 
-                var list = clientDest.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(destFileInfo.List.ServerRelativeUrl));
-                clientDest.Load(list);
-                clientDest.Load(list, l=> l.RootFolder.ServerRelativeUrl);
-                await clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                var list = await listCache.GetByServerRelativeUrl(destFileInfo.List.ServerRelativeUrl);
 
                 var rootFolderName = thisFileInfo.FolderPath.TrimStringFromStart(list.RootFolder.ServerRelativeUrl);
-                var folder = await CreateFolder(list, rootFolderName, clientDest);
+                var folder = await folderCache.CreateFolder(list, rootFolderName);
+
+                _logger.LogInformation($"Copying {fileToCopy.ServerRelativeFilePath} to {folder.ServerRelativeUrl}");
 
                 var fileName = thisFileInfo.FileName;
                 var retry = true;
@@ -70,12 +71,11 @@ public class SharePointFileListProcessor : IFileListProcessor
                         {
                             retryCount++;
                             retry = true;
-
-
                             var fi = new FileInfo(fileName);
 
                             // Build new name & try again
                             fileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
+                            _logger.LogWarning($"{fi.Name} already exists. Trying {fileName}");
                         }
                         else
                         {
@@ -102,27 +102,4 @@ public class SharePointFileListProcessor : IFileListProcessor
         }
     }
 
-    /// <summary>
-    /// Create Folder (including nested) client object
-    /// </summary>
-    public async Task<Folder> CreateFolder(List list, string fullFolderPath, ClientContext clientContext)
-    {
-        return await CreateFolderInternal(list.RootFolder, fullFolderPath, clientContext);
-    }
-
-    private async Task<Folder> CreateFolderInternal(Folder parentFolder, string fullFolderPath, ClientContext clientContext)
-    {
-        var folderUrls = fullFolderPath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-        string folderUrl = folderUrls[0];
-        var curFolder = parentFolder.Folders.Add(folderUrl);
-        clientContext.Load(curFolder);
-        await clientContext.ExecuteQueryAsyncWithThrottleRetries(_logger);
-
-        if (folderUrls.Length > 1)
-        {
-            var folderPath = string.Join("/", folderUrls, 1, folderUrls.Length - 1);
-            return await CreateFolderInternal(curFolder, folderPath, clientContext);
-        }
-        return curFolder;
-    }
 }

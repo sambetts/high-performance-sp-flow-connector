@@ -3,7 +3,10 @@
 /// <summary>
 /// From Flow inputs
 /// </summary>
-public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution);
+public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution)
+{
+    public bool IsValid => !string.IsNullOrEmpty(CurrentWebUrl) && !string.IsNullOrEmpty(RelativeUrlToCopy) && !string.IsNullOrEmpty(DestinationWebUrl) && !string.IsNullOrEmpty(RelativeUrlDestination);
+}
 
 /// <summary>
 /// Data CSOM can use

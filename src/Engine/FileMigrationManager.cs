@@ -54,6 +54,7 @@ public class FileCopyBatch
     public StartCopyRequest Request { get; set; } = null!;
 
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
+    public bool IsValid => Files.Count > 0 && Request != null && Request.IsValid;
 
     internal string ToJson()
     {

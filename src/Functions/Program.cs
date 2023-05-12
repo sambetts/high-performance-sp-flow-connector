@@ -1,7 +1,6 @@
-using Azure;
-using Engine;
 using Engine.Configuration;
 using Engine.SharePoint;
+using Functions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,7 +19,7 @@ var host = new HostBuilder()
     {
         var config = new Config(context.Configuration);
         services.AddSingleton(config);                   
-        services.AddSingleton<SharePointFileMigrationManager>();
+        services.AddSingleton<SharePointFileMigrationManager<SBFunctions>>();
 
     })
     .Build();

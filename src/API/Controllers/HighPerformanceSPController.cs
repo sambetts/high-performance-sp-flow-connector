@@ -7,7 +7,6 @@ using Engine.SharePoint;
 
 namespace API.Controllers
 {
-    [Authorize]
     [ApiController]
     [Route("[controller]")]
     public class HighPerformanceSPController : ControllerBase
@@ -28,7 +27,7 @@ namespace API.Controllers
             {
                 return BadRequest();
             }
-            var m = new SharePointFileMigrationManager(startCopyInfo.CurrentSite, _config, _logger);
+            var m = new SharePointFileMigrationManager<HighPerformanceSPController>(_config, _logger);
             await m.StartCopyAndSendToServiceBus(startCopyInfo);
 
             return Ok();

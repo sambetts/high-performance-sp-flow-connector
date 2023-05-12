@@ -24,7 +24,7 @@ var _logger = LoggerFactory.Create(config =>
     config.AddConsole();
 }).CreateLogger("Unit tests");
 var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents",
-               "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.NewDesintationName);
+               "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.NewDesintationName, false);
 
 var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentWebUrl, _logger, null);
 var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentWebUrl, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
@@ -33,6 +33,9 @@ var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentWebUrl, _lo
 
 var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
 
-var fileCopier = new SharePointFileListProcessor(_config, _logger);
+var tokenManagerDestSite = new SPOTokenManager(_config, copyCfg.DestinationWebUrl, _logger);
+var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
+
+var fileCopier = new SharePointFileListProcessor(_config, _logger, clientDest);
 await fileCopier.CopyToDestination(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg });
 

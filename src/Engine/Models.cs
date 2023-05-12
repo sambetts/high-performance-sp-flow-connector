@@ -3,7 +3,7 @@
 /// <summary>
 /// From Flow inputs
 /// </summary>
-public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution)
+public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution, bool DeleteAfterCopy)
 {
     public bool IsValid => !string.IsNullOrEmpty(CurrentWebUrl) && !string.IsNullOrEmpty(RelativeUrlToCopy) && !string.IsNullOrEmpty(DestinationWebUrl) && !string.IsNullOrEmpty(RelativeUrlDestination);
 }

@@ -1,9 +1,5 @@
-using Engine;
-using Engine.Configuration;
 using Engine.Models;
 using Engine.SharePoint;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Engine.Utils;
 
 namespace UnitTests;
@@ -66,19 +62,19 @@ public class ModelTests
         };
 
         Assert.IsTrue(file1.ValidFor(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction)));
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction, false)));
 
         // Same site but different folder
         Assert.IsFalse(file1.ValidFor(new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/subfolder",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction)));
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction, false)));
     }
 
     [TestMethod]
-    public void SharePointFileInfoWithListCopyTests()
+    public void ConvertFromForSameSiteCollectionTests()
     {
         // Valid test
-        var copyCfg1 = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/Source",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+        var copyCfgDifferentList = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/Source",
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Docs/FlowCopy", ConflictResolution.FailAction, false);
 
         var sourceFile = new SharePointFileInfoWithList
         {
@@ -91,12 +87,13 @@ public class ModelTests
             ServerRelativeFilePath = "/sites/Files/Shared Documents/Source/Contoso.pptx"
         };
 
-        var file2 = sourceFile.ConvertFromForSameSiteCollection(copyCfg1);
-        Assert.IsTrue(file2.FullSharePointUrl == "https://m365x72460609.sharepoint.com/sites/Files/Shared Documents/FlowCopy/Contoso.pptx");
+        var fileInDifferentList = sourceFile.ConvertFromForSameSiteCollection(copyCfgDifferentList);
+        Assert.IsTrue(fileInDifferentList.FullSharePointUrl == "https://m365x72460609.sharepoint.com/sites/Files/Docs/FlowCopy/Contoso.pptx");
+        Assert.IsTrue(fileInDifferentList.List.ServerRelativeUrl == "/sites/Files/Docs");
 
 
         var copyCfgNoTrailingSlash = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction, false);
         var file1NoTrailingSlash = new SharePointFileInfoWithList
         {
             List = new SiteList { ServerRelativeUrl = "/list1" },
@@ -124,7 +121,7 @@ public class ModelTests
             ServerRelativeFilePath = "/sites/Other/Shared Documents/Contoso.pptx"
         };
 
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => fileOutOfScope.ConvertFromForSameSiteCollection(copyCfg1));
+        Assert.ThrowsException<ArgumentOutOfRangeException>(() => fileOutOfScope.ConvertFromForSameSiteCollection(copyCfgDifferentList));
     }
 
 }

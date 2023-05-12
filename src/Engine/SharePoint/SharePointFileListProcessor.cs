@@ -1,5 +1,6 @@
 ﻿using Engine.Configuration;
 using Engine.Core;
+using Engine.Models;
 using Engine.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.SharePoint.Client;
@@ -9,44 +10,50 @@ namespace Engine.SharePoint;
 public class SharePointFileListProcessor : IFileListProcessor
 {
     private readonly ILogger _logger;
+    private readonly ClientContext _clientDest;
     private readonly Config _config;
 
-    public SharePointFileListProcessor(Config config, ILogger logger)
+    public SharePointFileListProcessor(Config config, ILogger logger, ClientContext clientDest)
     {
         _logger = logger;
+        _clientDest = clientDest;
         _config = config;
     }
     public async Task CopyToDestination(FileCopyBatch batch)
     {
-        var tokenManagerDestSite = new SPOTokenManager(_config, batch.Request.DestinationWebUrl, _logger);
-        var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
 
         var app = await AuthUtils.GetNewClientApp(_config);
         var downloader = new SharePointFileDownloader(app, _config, _logger);
 
-        await CopyFiles(downloader, clientDest, batch.Files, batch.Request);
+        await CopyFiles(downloader, batch.Files, batch.Request);
         
     }
 
-    private async Task CopyFiles(SharePointFileDownloader downloader, ClientContext clientDest, List<SharePointFileInfoWithList> files, Models.StartCopyRequest request)
+    private async Task CopyFiles(SharePointFileDownloader downloader, List<SharePointFileInfoWithList> files, StartCopyRequest request)
     {
-        var listCache = new ListCache(clientDest, _logger);
-        var folderCache = new FolderCache(clientDest, _logger);
-        foreach (var fileToCopy in files)
+        var listCache = new ListCache(_clientDest, _logger);
+        var folderCache = new FolderCache(_clientDest, _logger);
+        foreach (var sourceFileToCopy in files)
         {
-            using (var sourceFileStream = await downloader.DownloadAsStream(fileToCopy))
+            using (var sourceFileStream = await downloader.DownloadAsStream(sourceFileToCopy))
             {
-                var destFileInfo = fileToCopy.ConvertFromForSameSiteCollection(request);
-                var thisFileInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
+                var destFileInfo = sourceFileToCopy.ConvertFromForSameSiteCollection(request);
+                var destFilePathInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
 
-                var list = await listCache.GetByServerRelativeUrl(destFileInfo.List.ServerRelativeUrl);
+                var destList = await listCache.GetByServerRelativeUrl(destFileInfo.List.ServerRelativeUrl);
 
-                var rootFolderName = thisFileInfo.FolderPath.TrimStringFromStart(list.RootFolder.ServerRelativeUrl);
-                var folder = await folderCache.CreateFolder(list, rootFolderName);
+                // Figure out target folder name & create it if needed
+                var rootDestFolderName = destFilePathInfo.FolderPath.TrimStringFromStart(destList.RootFolder.ServerRelativeUrl);
+                if (!rootDestFolderName.EndsWith("/"))
+                {
+                    rootDestFolderName += "/";
+                }
+                var destFolderName = $"{rootDestFolderName}{destFileInfo.Subfolder}";
+                var destFolder = await folderCache.CreateFolder(destList, destFolderName);
 
-                _logger.LogInformation($"Copying {fileToCopy.ServerRelativeFilePath} to {folder.ServerRelativeUrl}");
+                _logger.LogInformation($"Copying {sourceFileToCopy.ServerRelativeFilePath} to {destFolder.ServerRelativeUrl}");
 
-                var fileName = thisFileInfo.FileName;
+                var destFileName = destFilePathInfo.FileName;
                 var retry = true;
                 var retryCount = 0; 
                 while (retry)
@@ -54,28 +61,28 @@ public class SharePointFileListProcessor : IFileListProcessor
                     var newItemCreateInfo = new FileCreationInformation()
                     {
                         Content = ReadFully(sourceFileStream),
-                        Url = fileName,
-                        Overwrite = request.ConflictResolution == Models.ConflictResolution.Replace
+                        Url = destFileName,
+                        Overwrite = request.ConflictResolution == ConflictResolution.Replace
                     };
-                    var newListItem = folder.Files.Add(newItemCreateInfo);
+                    var newListItem = destFolder.Files.Add(newItemCreateInfo);
                     newListItem.Update();
 
                     try
                     {
-                        await clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                        await _clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
                         retry = false;
                     }
                     catch (ServerException ex) when (ex.Message.Contains("already exists"))
                     {
-                        if (request.ConflictResolution == Models.ConflictResolution.NewDesintationName)
+                        if (request.ConflictResolution == ConflictResolution.NewDesintationName)
                         {
                             retryCount++;
                             retry = true;
-                            var fi = new FileInfo(fileName);
+                            var fi = new FileInfo(destFileName);
 
                             // Build new name & try again
-                            fileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
-                            _logger.LogWarning($"{fi.Name} already exists. Trying {fileName}");
+                            destFileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
+                            _logger.LogWarning($"{fi.Name} already exists. Trying {destFileName}");
                         }
                         else
                         {

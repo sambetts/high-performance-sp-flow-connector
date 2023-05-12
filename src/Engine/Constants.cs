@@ -10,6 +10,6 @@ namespace Engine
     {
         public const string THROTTLE_ERROR = "Got throttled by SPO";
 
-        public const int MAX_SPO_API_RETRIES = 10;
+        public const int MAX_SPO_API_RETRIES = 1000;
     }
 }

@@ -68,17 +68,20 @@ public class AuthUtils
             authResultDelegate(result);
         }
 
+        return GetClientContext(siteUrl, result);
+    }
+
+    public static ClientContext GetClientContext(string siteUrl, AuthenticationResult authentication)
+    {
         var ctx = new ClientContext(siteUrl);
         ctx.ExecutingWebRequest += (s, e) =>
         {
-            e.WebRequestExecutor.RequestHeaders["Authorization"] = "Bearer " + result.AccessToken;
+            e.WebRequestExecutor.RequestHeaders["Authorization"] = "Bearer " + authentication.AccessToken;
         };
-
-        ctx.Load(ctx.Web);
-        await ctx.ExecuteQueryAsyncWithThrottleRetries(tracer);
 
         return ctx;
     }
+
     public async static Task<ClientContext> GetClientContext(IConfidentialClientApplication app, string baseServerAddress, string siteUrl, ILogger tracer)
     {
         var result = await app.AuthForSharePointOnline(baseServerAddress);

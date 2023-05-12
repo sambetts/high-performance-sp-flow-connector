@@ -1,6 +1,7 @@
 ﻿using Engine.Configuration;
 using Engine.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.SharePoint.Client;
 
 namespace Engine.SharePoint;
 
@@ -26,8 +27,8 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
     }
 
 
-    public async Task MakeCopy(FileCopyBatch batch)
+    public async Task MakeCopy(FileCopyBatch batch, ClientContext clientContext)
     {
-        await MakeCopy(batch, new SharePointFileListProcessor(_config, _logger));
+        await MakeCopy(batch, new SharePointFileListProcessor(_config, _logger, clientContext));
     }
 }

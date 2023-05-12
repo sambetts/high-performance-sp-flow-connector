@@ -37,7 +37,7 @@ public class Tests
         var m = new FileMigrationManager(_logger);
 
         var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/", 
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction, false);
         var r = await m.StartCopy(copyCfg, new FakeLoader(), new FakeChunkManager());
         Assert.IsNotNull(r);
 
@@ -50,8 +50,8 @@ public class Tests
     public async Task SharePointFileMigrationManagerAndSharePointFileListProcessorTests()
     {
 
-        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.NewDesintationName);
+        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Docs/",
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Docs/FlowCopy/", ConflictResolution.NewDesintationName, false);
 
         var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentWebUrl, _logger, null);
         var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentWebUrl, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
@@ -60,7 +60,11 @@ public class Tests
 
         var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
 
-        var fileCopier = new SharePointFileListProcessor(_config, _logger);
+
+        var tokenManagerDestSite = new SPOTokenManager(_config, copyCfg.DestinationWebUrl, _logger);
+        var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
+
+        var fileCopier = new SharePointFileListProcessor(_config, _logger, clientDest);
         await fileCopier.CopyToDestination(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg });
     }
 
@@ -71,7 +75,7 @@ public class Tests
 
         // No folder
         var invalidCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "", 
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction);
+                       "https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents/FlowCopy", ConflictResolution.FailAction, false);
 
         await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await m.StartCopy(invalidCfg, new FakeLoader(), new FakeChunkManager()));
     }

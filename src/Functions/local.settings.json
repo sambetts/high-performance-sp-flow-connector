@@ -13,10 +13,8 @@
   "BaseServerAddress": "https://m365x72460609.sharepoint.com",
   "AzureAd": {
     "Instance": "https://login.microsoftonline.com/",
-    "Domain": "dev.teamsplatform.app",
     "TenantId": "f6cd3d8c-b7de-4b84-a736-446fa13aefe0",
-    "ClientId": "2d183a60-a375-4db1-b80f-2d6f06c896df",
-    "Scopes": "user.read"
+    "ClientId": "2d183a60-a375-4db1-b80f-2d6f06c896df"
   },
   "QueueNameOperations": "operations"
 }

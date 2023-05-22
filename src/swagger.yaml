@@ -1,0 +1,48 @@
+swagger: '2.0'
+info:
+  title: HighPerformanceSP
+  description: ''
+  version: '1.0'
+host: {hostname}
+basePath: /
+schemes:
+  - https
+consumes: []
+produces: []
+paths:
+  /api/FlowReceiver:
+    post:
+      responses:
+        default:
+          description: default
+          schema: {}
+      summary: StartCopy
+      operationId: StartCopy
+      parameters:
+        - name: body
+          in: body
+          required: false
+          schema:
+            type: object
+            properties:
+              currentWebUrl:
+                type: string
+                description: currentWebUrl
+              relativeUrlToCopy:
+                type: string
+                description: relativeUrlToCopy
+              destinationWebUrl:
+                type: string
+                description: destinationWebUrl
+              relativeUrlDestination:
+                type: string
+                description: relativeUrlDestination
+              conflictResolution:
+                type: integer
+                format: int32
+                description: conflictResolution
+definitions: {}
+parameters: {}
+responses: {}
+securityDefinitions: {}
+tags: []

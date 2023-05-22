@@ -1,9 +1,11 @@
-﻿using Engine.Configuration;
+﻿using Azure.Core;
+using Engine.Configuration;
 using Engine.Core;
 using Engine.Models;
 using Engine.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.SharePoint.Client;
+using System.Net;
 
 namespace Engine.SharePoint;
 
@@ -21,74 +23,83 @@ public class SharePointFileListProcessor : IFileListProcessor
     }
     public async Task CopyToDestination(FileCopyBatch batch)
     {
-
+        var timer = new JobTimer(_logger, "Copy files");
+        timer.Start();
         var app = await AuthUtils.GetNewClientApp(_config);
         var downloader = new SharePointFileDownloader(app, _config, _logger);
 
-        await CopyFiles(downloader, batch.Files, batch.Request);
-        
-    }
-
-    private async Task CopyFiles(SharePointFileDownloader downloader, List<SharePointFileInfoWithList> files, StartCopyRequest request)
-    {
         var listCache = new ListCache(_clientDest, _logger);
         var folderCache = new FolderCache(_clientDest, _logger);
-        foreach (var sourceFileToCopy in files)
+        foreach (var sourceFileToCopy in batch.Files)
         {
-            using (var sourceFileStream = await downloader.DownloadAsStream(sourceFileToCopy))
+            try
             {
-                var destFileInfo = sourceFileToCopy.ConvertFromForSameSiteCollection(request);
-                var destFilePathInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
+                await ProcessFile(sourceFileToCopy, batch.Request, downloader, listCache, folderCache);
+            }
+            catch (WebException ex)
+            {
+                _logger.LogError($"Got unexpected error {ex.Message}");
+            }
+        }
 
-                var destList = await listCache.GetByServerRelativeUrl(destFileInfo.List.ServerRelativeUrl);
+        timer.StopAndPrintElapsed();
+    }
 
-                // Figure out target folder name & create it if needed
-                var rootDestFolderName = destFilePathInfo.FolderPath.TrimStringFromStart(destList.RootFolder.ServerRelativeUrl);
-                if (!rootDestFolderName.EndsWith("/"))
+    private async Task ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request, SharePointFileDownloader downloader, ListCache listCache, FolderCache folderCache)
+    {
+        using (var sourceFileStream = await downloader.DownloadAsStream(sourceFileToCopy))
+        {
+            var destFileInfo = sourceFileToCopy.ConvertFromForSameSiteCollection(request);
+            var destFilePathInfo = ServerRelativeFilePathInfo.FromServerRelativeFilePath(destFileInfo.ServerRelativeFilePath);
+
+            var destList = await listCache.GetByServerRelativeUrl(destFileInfo.List.ServerRelativeUrl);
+
+            // Figure out target folder name & create it if needed
+            var rootDestFolderName = destFilePathInfo.FolderPath.TrimStringFromStart(destList.RootFolder.ServerRelativeUrl);
+            if (!rootDestFolderName.EndsWith("/"))
+            {
+                rootDestFolderName += "/";
+            }
+            var destFolderName = $"{rootDestFolderName}{destFileInfo.Subfolder}";
+            var destFolder = await folderCache.CreateFolder(destList, destFolderName);
+
+            _logger.LogInformation($"Copying {sourceFileToCopy.ServerRelativeFilePath} to {destFolder.ServerRelativeUrl}");
+
+            var destFileName = destFilePathInfo.FileName;
+            var retry = true;
+            var retryCount = 0;
+            while (retry)
+            {
+                var newItemCreateInfo = new FileCreationInformation()
                 {
-                    rootDestFolderName += "/";
+                    Content = ReadFully(sourceFileStream),
+                    Url = destFileName,
+                    Overwrite = request.ConflictResolution == ConflictResolution.Replace
+                };
+                var newListItem = destFolder.Files.Add(newItemCreateInfo);
+                newListItem.Update();
+
+                try
+                {
+                    await _clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                    retry = false;
                 }
-                var destFolderName = $"{rootDestFolderName}{destFileInfo.Subfolder}";
-                var destFolder = await folderCache.CreateFolder(destList, destFolderName);
-
-                _logger.LogInformation($"Copying {sourceFileToCopy.ServerRelativeFilePath} to {destFolder.ServerRelativeUrl}");
-
-                var destFileName = destFilePathInfo.FileName;
-                var retry = true;
-                var retryCount = 0; 
-                while (retry)
+                catch (ServerException ex) when (ex.Message.Contains("already exists"))
                 {
-                    var newItemCreateInfo = new FileCreationInformation()
+                    if (request.ConflictResolution == ConflictResolution.NewDesintationName)
                     {
-                        Content = ReadFully(sourceFileStream),
-                        Url = destFileName,
-                        Overwrite = request.ConflictResolution == ConflictResolution.Replace
-                    };
-                    var newListItem = destFolder.Files.Add(newItemCreateInfo);
-                    newListItem.Update();
+                        retryCount++;
+                        retry = true;
+                        var fi = new FileInfo(destFileName);
 
-                    try
-                    {
-                        await _clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
-                        retry = false;
+                        // Build new name & try again
+                        destFileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
+                        _logger.LogWarning($"{fi.Name} already exists. Trying {destFileName}");
                     }
-                    catch (ServerException ex) when (ex.Message.Contains("already exists"))
+                    else
                     {
-                        if (request.ConflictResolution == ConflictResolution.NewDesintationName)
-                        {
-                            retryCount++;
-                            retry = true;
-                            var fi = new FileInfo(destFileName);
-
-                            // Build new name & try again
-                            destFileName = $"{fi.Name.TrimStringFromEnd(fi.Extension)}_{retryCount}{fi.Extension}";
-                            _logger.LogWarning($"{fi.Name} already exists. Trying {destFileName}");
-                        }
-                        else
-                        {
-                            // Fail
-                            throw;
-                        }
+                        // Fail
+                        throw;
                     }
                 }
             }
@@ -97,7 +108,7 @@ public class SharePointFileListProcessor : IFileListProcessor
 
     static byte[] ReadFully(Stream input)
     {
-        byte[] buffer = new byte[16 * 1024];
+        var buffer = new byte[16 * 1024];
         using (var ms = new MemoryStream())
         {
             int read;
@@ -108,5 +119,4 @@ public class SharePointFileListProcessor : IFileListProcessor
             return ms.ToArray();
         }
     }
-
 }

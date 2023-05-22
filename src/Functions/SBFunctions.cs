@@ -66,7 +66,7 @@ public class SBFunctions
                 semaphoreSlim.Release();
             }
 
-            await _fileMigrationManager.MakeCopy(update, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth!));
+            //await _fileMigrationManager.MakeCopy(update, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth!));
         }
         else
         {

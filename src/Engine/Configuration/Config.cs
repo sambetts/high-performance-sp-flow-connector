@@ -13,9 +13,6 @@ public class Config : BaseConfig
     [ConfigValue]
     public string KeyVaultUrl { get; set; } = string.Empty;
 
-    [ConfigValue(true)]
-    public string AppInsightsInstrumentationKey { get; set; } = string.Empty;
-
     [ConfigSection("AzureAd")]
     public AzureAdConfig AzureAdConfig { get; set; } = null!;
 
@@ -25,6 +22,4 @@ public class Config : BaseConfig
     [ConfigSection("ConnectionStrings")]
     public ConnectionStrings ConnectionStrings { get; set; } = null!;
 
-    [ConfigSection("Dev")]
-    public DevConfig DevConfig { get; set; } = null!;
 }

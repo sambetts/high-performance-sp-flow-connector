@@ -16,7 +16,7 @@ public class AzureAdConfig : BaseConfig
     public string? ClientSecret { get; set; } = string.Empty;
 
     [ConfigValue]
-    public string? ClientID { get; set; } = string.Empty;
+    public string? ClientId { get; set; } = string.Empty;
 
     [ConfigValue]
     public string? TenantId { get; set; } = string.Empty;

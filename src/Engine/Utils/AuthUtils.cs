@@ -112,14 +112,14 @@ public class AuthUtils
 
     public static async Task<ClientContext> GetClientContext(Config config, string siteUrl, ILogger tracer, Action<AuthenticationResult>? authResultDelegate)
     {
-        return await GetClientContext(siteUrl, config.AzureAdConfig.TenantId!, config.AzureAdConfig.ClientID!,
+        return await GetClientContext(siteUrl, config.AzureAdConfig.TenantId!, config.AzureAdConfig.ClientId!,
             config.AzureAdConfig.ClientSecret!, config.KeyVaultUrl, config.BaseServerAddress, tracer, authResultDelegate);
     }
 
     public static async Task<IConfidentialClientApplication> GetNewClientApp(Config config)
     {
         return await GetNewClientApp(config.AzureAdConfig.TenantId!,
-            config.AzureAdConfig.ClientID!, config.AzureAdConfig.ClientSecret!, config.KeyVaultUrl);
+            config.AzureAdConfig.ClientId!, config.AzureAdConfig.ClientSecret!, config.KeyVaultUrl);
     }
 }
 

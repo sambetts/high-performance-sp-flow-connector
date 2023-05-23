@@ -1,12 +1,8 @@
 using Engine;
-using Engine.Code;
 using Engine.Configuration;
 using Engine.Models;
-using Engine.SharePoint;
-using Engine.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.SharePoint.Client;
 
 namespace UnitTests;
 
@@ -41,31 +37,8 @@ public class Tests
         var r = await m.StartCopy(copyCfg, new FakeLoader(), new FakeChunkManager());
         Assert.IsNotNull(r);
 
-        await m.MakeCopy(new FileCopyBatch { Files = r, Request = copyCfg }, new FakeFileListProcessor());
-    }
-
-#if DEBUG
-    [TestMethod]
-#endif
-    public async Task SharePointFileMigrationManagerAndSharePointFileListProcessorTests()
-    {
-
-        var copyCfg = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Docs/",
-                       "https://m365x72460609.sharepoint.com/sites/Files", "/Docs/FlowCopy/", ConflictResolution.NewDesintationName, false);
-
-        var sourceContext = await AuthUtils.GetClientContext(_config, copyCfg.CurrentWebUrl, _logger, null);
-        var sourceListGuid = await SPOListLoader.GetListId(new CopyInfo(copyCfg.CurrentWebUrl, copyCfg.RelativeUrlToCopy), sourceContext, _logger);
-        var sourceCrawler = new DataCrawler<ListItemCollectionPosition>(_logger);
-        var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentWebUrl, _logger);
-
-        var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
-
-
-        var tokenManagerDestSite = new SPOTokenManager(_config, copyCfg.DestinationWebUrl, _logger);
-        var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
-
-        var fileCopier = new SharePointFileListProcessor(_config, _logger, clientDest);
-        await fileCopier.CopyToDestination(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg });
+        var results = await m.CompleteCopy(new FileCopyBatch { Files = r, Request = copyCfg }, new FailConfigurableTimesFileListProcessor(2));
+        Assert.IsTrue(results.Count == r.Count);
     }
 
     [TestMethod]

@@ -36,6 +36,6 @@ var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(source
 var tokenManagerDestSite = new SPOTokenManager(_config, copyCfg.DestinationWebUrl, _logger);
 var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
 
-var fileCopier = new SharePointFileListProcessor(_config, _logger, clientDest);
-await fileCopier.CopyToDestination(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg });
+var m = new FileMigrationManager(_logger);
+await m.CompleteCopy(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg }, new SharePointFileListProcessor(_config, _logger, clientDest));
 

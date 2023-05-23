@@ -1,14 +1,43 @@
 ﻿using Engine;
 using Engine.Core;
+using Engine.Models;
 using Engine.SharePoint;
 
 namespace UnitTests;
 
-public class FakeFileListProcessor : IFileListProcessor
+public class FailConfigurableTimesFileListProcessor : IFileListProcessor
 {
-    public Task CopyToDestination(FileCopyBatch batch)
+    private readonly int _failCount;
+    private Dictionary<SharePointFileInfoWithList, int> _filesFailed = new();
+
+    public FailConfigurableTimesFileListProcessor(int failCount)
     {
-        return Task.CompletedTask;
+        _failCount = failCount;
+    }
+
+    public Task Init()
+    {
+        return Task.CompletedTask;  
+    }
+
+    public Task<string> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request)
+    {
+        if (_filesFailed.ContainsKey(sourceFileToCopy) && _filesFailed[sourceFileToCopy] == _failCount)
+        {
+            return Task.FromResult("fakeurl");
+        }
+        else
+        {
+            if (!_filesFailed.ContainsKey(sourceFileToCopy))
+            {
+                _filesFailed.Add(sourceFileToCopy, 1);
+            }
+            else
+            {
+                _filesFailed[sourceFileToCopy] = _filesFailed[sourceFileToCopy] + 1;
+            }
+            throw new Exception($"Failed to copy file {_filesFailed[sourceFileToCopy]} times");
+        }
     }
 }
 

@@ -42,10 +42,64 @@ public class FileMigrationManager
         return sourceFiles.FilesFound;
     }
 
-    public async Task MakeCopy(FileCopyBatch batch, IFileListProcessor fileListProcessor)
+
+    public async Task<List<string>> CompleteCopy(FileCopyBatch batch, IFileListProcessor fileListProcessor)
     {
-        await fileListProcessor.CopyToDestination(batch);
+        const int MAX_FAIL_COUNT = 3;
+        var timer = new JobTimer(_logger, "Copy files");
+        timer.Start();
+        await fileListProcessor.Init();
+
+        var failedFiles = new Dictionary<SharePointFileInfoWithList, int>();
+        var filesToProcess = new List<SharePointFileInfoWithList>(batch.Files);
+
+        var files = new List<string>();
+        while (filesToProcess.Count > 0)
+        {
+            foreach (var sourceFileToCopy in filesToProcess)
+            {
+                var fileSuccess = false;
+                try
+                {
+                    var copiedUrl = await fileListProcessor.ProcessFile(sourceFileToCopy, batch.Request);
+                    files.Add(copiedUrl);
+                    fileSuccess = true;
+                }
+                catch (Exception ex)
+                {
+                    var failCount = 0;
+                    if (failedFiles.ContainsKey(sourceFileToCopy))
+                    {
+                        failCount = failedFiles[sourceFileToCopy];
+                    }
+                    else
+                    {
+                        failedFiles.Add(sourceFileToCopy, failCount);
+                    }
+                    failCount++;
+                    failedFiles[sourceFileToCopy] = failCount;
+                    if (failCount == MAX_FAIL_COUNT)
+                    {
+                        _logger.LogError($"Got unexpected error #{failCount} '{ex.Message}' on {sourceFileToCopy.FullSharePointUrl}. Giving up.");
+                    }
+                    else
+                    {
+                        _logger.LogError($"Got unexpected error #{failCount} '{ex.Message}' on {sourceFileToCopy.FullSharePointUrl}.");
+                    }
+                }
+                if (fileSuccess)
+                {
+                    failedFiles.Remove(sourceFileToCopy);
+                }
+            }
+
+            // Retry any files that failed, below max fail threshold
+            filesToProcess = failedFiles.Where(x => x.Value < MAX_FAIL_COUNT).Select(x => x.Key).ToList();
+        }
+
+        timer.StopAndPrintElapsed();
         _logger.LogInformation($"Copied {batch.Files.Count} files.");
+        return files;
     }
 }
 

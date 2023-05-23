@@ -1,4 +1,5 @@
-﻿using Engine.SharePoint;
+﻿using Engine.Models;
+using Engine.SharePoint;
 
 namespace Engine.Core;
 
@@ -9,7 +10,8 @@ public interface IListLoader<PAGETOKENTYPE>
 }
 public interface IFileListProcessor
 {
-    Task CopyToDestination(FileCopyBatch batch);
+    Task Init();
+    Task<string> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request);
 }
 
 public interface IFileResultManager

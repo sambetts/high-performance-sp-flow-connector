@@ -29,6 +29,6 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
 
     public async Task MakeCopy(FileCopyBatch batch, ClientContext clientContext)
     {
-        await MakeCopy(batch, new SharePointFileListProcessor(_config, _logger, clientContext));
+        await CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, clientContext));
     }
 }

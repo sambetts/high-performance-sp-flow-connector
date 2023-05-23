@@ -1,6 +1,7 @@
 {
   "IsEncrypted": false,
   "Values": {
+    "QueueNameOperations": "opsdev",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
   },
@@ -16,5 +17,5 @@
     "TenantId": "f6cd3d8c-b7de-4b84-a736-446fa13aefe0",
     "ClientId": "2d183a60-a375-4db1-b80f-2d6f06c896df"
   },
-  "QueueNameOperations": "operations"
+  "QueueNameOperations": "opsdev"
 }

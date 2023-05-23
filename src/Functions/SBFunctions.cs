@@ -14,6 +14,7 @@ public class SBFunctions
     private readonly ILogger _logger;
     private readonly SharePointFileMigrationManager<SBFunctions> _fileMigrationManager;
     private readonly Config _config;
+
     private static AuthenticationResult? _auth = null;
     private static IConfidentialClientApplication? _confidentialClientApplication = null;
     private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
@@ -26,7 +27,7 @@ public class SBFunctions
     }
 
     [Function(nameof(ProcessFileOperation))]
-    public async Task ProcessFileOperation([ServiceBusTrigger("operations", Connection = "ServiceBus")] string messageContents)
+    public async Task ProcessFileOperation([ServiceBusTrigger("%QueueNameOperations%", Connection = "ServiceBus")] string messageContents)
     {
 
         if (string.IsNullOrEmpty(messageContents))
@@ -66,7 +67,8 @@ public class SBFunctions
                 semaphoreSlim.Release();
             }
 
-            //await _fileMigrationManager.MakeCopy(update, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth!));
+            // Make the copy
+            await _fileMigrationManager.CompleteCopyToSharePoint(update, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth!));
         }
         else
         {

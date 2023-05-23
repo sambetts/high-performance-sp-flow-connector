@@ -23,6 +23,6 @@ public class SBFileResultManager : IFileResultManager
     {
         var m = new ServiceBusMessage(fileCopyBatch.ToJson());
         await _serviceBusSender.SendMessageAsync(m);
-        _logger.LogInformation($"Sent {fileCopyBatch.Files} file references to service bus to copy");
+        _logger.LogInformation($"Sent {fileCopyBatch.Files.Count} file references to service bus to copy");
     }
 }

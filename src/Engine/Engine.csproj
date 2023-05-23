@@ -7,6 +7,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="SharePoint\BatchMigrator.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Azure.Identity" Version="1.8.2" />
 		<PackageReference Include="Azure.Messaging.ServiceBus" Version="7.13.1" />
 		<PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.5.0" />

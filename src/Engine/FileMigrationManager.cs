@@ -10,7 +10,7 @@ namespace Engine;
 public class FileMigrationManager
 {
     protected readonly ILogger _logger;
-    const int MAX_FILES_PER_BATCH = 20;
+    const int MAX_FILES_PER_BATCH = 200;
 
     public FileMigrationManager(ILogger logger)
     {
@@ -46,14 +46,14 @@ public class FileMigrationManager
     public async Task<List<string>> CompleteCopy(FileCopyBatch batch, IFileListProcessor fileListProcessor)
     {
         const int MAX_FAIL_COUNT = 3;
-        var timer = new JobTimer(_logger, "Copy files");
+        var timer = new JobTimer(_logger, nameof(CompleteCopy));
         timer.Start();
         await fileListProcessor.Init();
 
         var failedFiles = new Dictionary<SharePointFileInfoWithList, int>();
         var filesToProcess = new List<SharePointFileInfoWithList>(batch.Files);
+        var throttleStats = new FilesUploadResults();
 
-        var files = new List<string>();
         while (filesToProcess.Count > 0)
         {
             foreach (var sourceFileToCopy in filesToProcess)
@@ -61,8 +61,8 @@ public class FileMigrationManager
                 var fileSuccess = false;
                 try
                 {
-                    var copiedUrl = await fileListProcessor.ProcessFile(sourceFileToCopy, batch.Request);
-                    files.Add(copiedUrl);
+                    var urlStats = await fileListProcessor.ProcessFile(sourceFileToCopy, batch.Request);
+                    throttleStats.Add(urlStats);
                     fileSuccess = true;
                 }
                 catch (Exception ex)
@@ -97,9 +97,22 @@ public class FileMigrationManager
             filesToProcess = failedFiles.Where(x => x.Value < MAX_FAIL_COUNT).Select(x => x.Key).ToList();
         }
 
+        Print(ThottleUploadStage.ListLookup, throttleStats.Throttling);
+        Print(ThottleUploadStage.UploadFile, throttleStats.Throttling);
+        Print(ThottleUploadStage.FolderCreate, throttleStats.Throttling);
+
         timer.StopAndPrintElapsed();
         _logger.LogInformation($"Copied {batch.Files.Count} files.");
-        return files;
+        return throttleStats.FilesCreated;
+    }
+
+    void Print(ThottleUploadStage stage, Dictionary<ThottleUploadStage, int> datat)
+    {
+        var r = datat.Where(t => t.Key == stage).ToList();
+        if (r.Count > 0)
+        {
+            _logger.LogInformation($"Throttle stats: {Enum.GetName(stage)}: {r.Count}");
+        }
     }
 }
 

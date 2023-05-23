@@ -7,13 +7,14 @@ public class ListCache
 {
     private readonly ClientContext _clientContext;
     private readonly ILogger _logger;
-
+    private readonly Action _throttledCallback;
     private readonly Dictionary<string, List> _listCache = new Dictionary<string, List>();
 
-    public ListCache(ClientContext clientContext, ILogger logger)
+    public ListCache(ClientContext clientContext, ILogger logger, Action throttledCallback)
     {
         _clientContext = clientContext;
         _logger = logger;
+        _throttledCallback = throttledCallback;
     }
 
     public async Task<List> GetByServerRelativeUrl(string url)
@@ -23,7 +24,7 @@ public class ListCache
             var list = _clientContext.Web.GetListUsingPath(ResourcePath.FromDecodedUrl(url));
             _clientContext.Load(list);
             _clientContext.Load(list, l => l.RootFolder.ServerRelativeUrl);
-            await _clientContext.ExecuteQueryAsyncWithThrottleRetries(_logger);
+            await _clientContext.ExecuteQueryAsyncWithThrottleRetries(_logger, _throttledCallback);
             _listCache.Add(url, list);
         }
 
@@ -35,26 +36,15 @@ public class FolderCache
 {
     private readonly ClientContext _clientContext;
     private readonly ILogger _logger;
-
+    private readonly Action _throttledCallback;
     private readonly Dictionary<string, Folder> _folderCache = new Dictionary<string, Folder>();
 
-    public FolderCache(ClientContext clientContext, ILogger logger)
+    public FolderCache(ClientContext clientContext, ILogger logger, Action throttledCallback)
     {
         _clientContext = clientContext;
         _logger = logger;
+        _throttledCallback = throttledCallback;
     }
-
-    public async Task<Folder> GetByServerRelativeUrl(List list, string rootFolderName)
-    {
-        if (!_folderCache.ContainsKey(rootFolderName))
-        {
-            var folder = await CreateFolder(list, rootFolderName);
-
-        }
-
-        return _folderCache[rootFolderName];
-    }
-
 
     /// <summary>
     /// Create Folder (including nested) client object
@@ -70,7 +60,7 @@ public class FolderCache
         string folderUrl = folderUrls[0];
         var curFolder = parentFolder.Folders.Add(folderUrl);
         _clientContext.Load(curFolder);
-        await _clientContext.ExecuteQueryAsyncWithThrottleRetries(_logger);
+        await _clientContext.ExecuteQueryAsyncWithThrottleRetries(_logger, _throttledCallback);
 
         if (folderUrls.Length > 1)
         {

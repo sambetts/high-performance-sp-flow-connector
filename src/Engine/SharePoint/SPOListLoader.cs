@@ -28,7 +28,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         try
         {
             spClient.Load(sourceList, l => l.Id, l => l.Title);
-            await spClient.ExecuteQueryAsyncWithThrottleRetries(logger);
+            await spClient.ExecuteQueryAsyncWithThrottleRetries(logger, null);
         }
         catch (System.Net.WebException ex)
         {
@@ -66,7 +66,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         {
             _listDef = spClientList.Web.Lists.GetById(_listId);
             spClientList.Load(_listDef, l => l.BaseType, l => l.ItemCount, l => l.RootFolder, list => list.Title);
-            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
+            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger, null);
         }
         pageResults.ListLoaded = new SiteList { Title = _listDef.Title, ServerRelativeUrl = _listDef.RootFolder.ServerRelativeUrl };
 
@@ -106,7 +106,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
 
         try
         {
-            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger);
+            await spClientList.ExecuteQueryAsyncWithThrottleRetries(_logger, null);
         }
         catch (System.Net.WebException ex)
         {

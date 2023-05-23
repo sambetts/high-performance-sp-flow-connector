@@ -17,7 +17,9 @@ public class SharePointFileListProcessor : IFileListProcessor
     private IConfidentialClientApplication? _application;
     private SharePointFileDownloader? _sharePointFileDownloader;
     private ListCache? _listCache;
-    private FolderCache? _folderCache;  
+    private FolderCache? _folderCache;
+
+    private SingleFileFileUploadResults _fileUploadResults = new SingleFileFileUploadResults();
 
     public SharePointFileListProcessor(Config config, ILogger logger, ClientContext clientDest)
     {
@@ -29,11 +31,11 @@ public class SharePointFileListProcessor : IFileListProcessor
     {
         _application = await AuthUtils.GetNewClientApp(_config);
         _sharePointFileDownloader = new SharePointFileDownloader(_application, _config, _logger);
-        _listCache = new ListCache(_clientDest, _logger);
-        _folderCache = new FolderCache(_clientDest, _logger);
+        _listCache = new ListCache(_clientDest, _logger, () => _fileUploadResults.LogThrottle(ThottleUploadStage.ListLookup));
+        _folderCache = new FolderCache(_clientDest, _logger, () => _fileUploadResults.LogThrottle(ThottleUploadStage.FolderCreate));
     }
 
-    public async Task<string> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request)
+    public async Task<SingleFileFileUploadResults> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request)
     {
         if (_sharePointFileDownloader == null || _listCache == null || _folderCache == null)
         {
@@ -73,7 +75,7 @@ public class SharePointFileListProcessor : IFileListProcessor
 
                 try
                 {
-                    await _clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger);
+                    await _clientDest.ExecuteQueryAsyncWithThrottleRetries(_logger, () => _fileUploadResults.LogThrottle(ThottleUploadStage.UploadFile));
                     retry = false;
                 }
                 catch (ServerException ex) when (ex.Message.Contains("already exists"))
@@ -95,7 +97,7 @@ public class SharePointFileListProcessor : IFileListProcessor
                     }
                 }
             }
-            return destFileName;
+            return _fileUploadResults;
         }
     }
 
@@ -112,4 +114,39 @@ public class SharePointFileListProcessor : IFileListProcessor
             return ms.ToArray();
         }
     }
+}
+
+public abstract class ThrottleStats
+{
+    public void LogThrottle(ThottleUploadStage stage)
+    {
+        if (!Throttling.ContainsKey(stage)) Throttling.Add(stage, 0);
+        Throttling[stage] = Throttling[stage] + 1;
+    }
+    public Dictionary<ThottleUploadStage, int> Throttling { get; set; } = new();
+}
+public class FilesUploadResults : ThrottleStats
+{
+    public List<string> FilesCreated { get; set; } = new();
+
+    public void Add(SingleFileFileUploadResults fileUpload)
+    {
+        FilesCreated.Add(fileUpload.FileCreated);
+        foreach (var item in fileUpload.Throttling)
+        {
+            if (!Throttling.ContainsKey(item.Key)) Throttling.Add(item.Key, 0);
+            Throttling[item.Key] = Throttling[item.Key] + item.Value;
+        }
+    }
+}
+public class SingleFileFileUploadResults : ThrottleStats
+{
+    public string FileCreated { get; set; } = string.Empty;
+
+}
+public enum ThottleUploadStage
+{
+    UploadFile,
+    FolderCreate,
+    ListLookup
 }

@@ -94,7 +94,7 @@ public class AuthUtils
         };
 
         ctx.Load(ctx.Web);
-        await ctx.ExecuteQueryAsyncWithThrottleRetries(tracer);
+        await ctx.ExecuteQueryAsyncWithThrottleRetries(tracer, null);
 
         return ctx;
     }

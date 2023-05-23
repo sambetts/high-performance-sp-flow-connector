@@ -6,7 +6,7 @@ namespace Engine.SharePoint;
 
 public static class CSOMExtensions
 {
-    public static async Task ExecuteQueryAsyncWithThrottleRetries(this ClientContext clientContext, ILogger tracer)
+    public static async Task ExecuteQueryAsyncWithThrottleRetries(this ClientContext clientContext, ILogger tracer, Action? throttledCallback)
     {
         int retryAttempts = 0;
         int backoffIntervalSeconds = 1;
@@ -72,6 +72,7 @@ public static class CSOMExtensions
                     }
 
                     // Trace standard throttling message
+                    throttledCallback?.Invoke();
                     tracer.LogWarning($"{Constants.THROTTLE_ERROR} executing CSOM request. Sleeping for {retryAfterInterval} seconds.");
 
                     // Delay for the requested seconds
@@ -92,20 +93,5 @@ public static class CSOMExtensions
         tracer.LogError($"{Constants.THROTTLE_ERROR} executing CSOM request. {givingUpMsgBody}");
         throw new Exception($"Error executing CSOM request. {givingUpMsgBody}");
 
-    }
-
-    public static async Task<Guid> SaveFile(this List targetList, BaseSharePointFileInfo fileInfo, ClientContext ctx, byte[] contents, ILogger debugTracer)
-    {
-        var fileCreationInfo = new FileCreationInformation
-        {
-            Content = contents,
-            Overwrite = true,
-            Url = fileInfo.ServerRelativeFilePath
-        };
-        var uploadFile = targetList.RootFolder.Files.Add(fileCreationInfo);
-        ctx.Load(uploadFile);
-        await ctx.ExecuteQueryAsyncWithThrottleRetries(debugTracer);
-
-        return uploadFile.UniqueId;
     }
 }

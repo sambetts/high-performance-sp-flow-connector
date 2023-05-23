@@ -11,7 +11,7 @@ public interface IListLoader<PAGETOKENTYPE>
 public interface IFileListProcessor
 {
     Task Init();
-    Task<string> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request);
+    Task<SingleFileFileUploadResults> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request);
 }
 
 public interface IFileResultManager

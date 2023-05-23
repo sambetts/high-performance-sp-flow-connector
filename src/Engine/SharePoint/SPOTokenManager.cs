@@ -84,7 +84,7 @@ public class SPOTokenManager
         {
             spClient.Load(spClient.Web);
             spClient.Load(spClient.Site, s => s.Url);
-            await spClient.ExecuteQueryAsyncWithThrottleRetries(_tracer);
+            await spClient.ExecuteQueryAsyncWithThrottleRetries(_tracer, null);
         }
     }
 }

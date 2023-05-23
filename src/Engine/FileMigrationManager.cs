@@ -102,7 +102,7 @@ public class FileMigrationManager
         Print(ThottleUploadStage.FolderCreate, throttleStats.Throttling);
 
         timer.StopAndPrintElapsed();
-        _logger.LogInformation($"Copied {batch.Files.Count} files.");
+        _logger.LogInformation($"Copied {batch.Files.Count} files to destination.");
         return throttleStats.FilesCreated;
     }
 

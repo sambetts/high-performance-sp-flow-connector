@@ -59,7 +59,7 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
         camlQuery.ListItemCollectionPosition = position;
 
         // For large lists, make sure we refresh the context when the token expires. Do it for each page.
-        var spClientList = await _tokenManager.GetOrRefreshContext(() => _listDef = null);      // When token expires, clear list def so it's reloaded
+        var spClientList = await _tokenManager.GetOrRefreshContext((t) => _listDef = null);      // When token expires, clear list def so it's reloaded
 
         // Load list definition if needed
         if (_listDef == null)

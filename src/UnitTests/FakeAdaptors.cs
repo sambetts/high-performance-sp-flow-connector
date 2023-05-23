@@ -20,11 +20,11 @@ public class FailConfigurableTimesFileListProcessor : IFileListProcessor
         return Task.CompletedTask;  
     }
 
-    public Task<string> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request)
+    public Task<SingleFileFileUploadResults> ProcessFile(SharePointFileInfoWithList sourceFileToCopy, StartCopyRequest request)
     {
         if (_filesFailed.ContainsKey(sourceFileToCopy) && _filesFailed[sourceFileToCopy] == _failCount)
         {
-            return Task.FromResult("fakeurl");
+            return Task.FromResult(new SingleFileFileUploadResults { });
         }
         else
         {

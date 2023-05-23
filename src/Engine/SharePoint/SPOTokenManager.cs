@@ -44,7 +44,7 @@ public class SPOTokenManager
     {
         return await GetOrRefreshContext(null)!;
     }
-    public async Task<ClientContext> GetOrRefreshContext(Action? newTokenCallback)
+    public async Task<ClientContext> GetOrRefreshContext(Action<AuthenticationResult>? newTokenCallback)
     {
         if (NeedsRefresh(_contextAuthResult))
         {
@@ -54,7 +54,7 @@ public class SPOTokenManager
 
             if (newTokenCallback != null)
             {
-                newTokenCallback();
+                newTokenCallback(_contextAuthResult!);
             }
         }
         return _context!;

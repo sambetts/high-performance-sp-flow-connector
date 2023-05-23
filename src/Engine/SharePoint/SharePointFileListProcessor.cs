@@ -11,6 +11,7 @@ namespace Engine.SharePoint;
 public class SharePointFileListProcessor : IFileListProcessor
 {
     private readonly ILogger _logger;
+    private readonly AuthenticationResult _authentication;
     private readonly ClientContext _clientDest;
     private readonly Config _config;
 
@@ -21,16 +22,17 @@ public class SharePointFileListProcessor : IFileListProcessor
 
     private SingleFileFileUploadResults _fileUploadResults = new SingleFileFileUploadResults();
 
-    public SharePointFileListProcessor(Config config, ILogger logger, ClientContext clientDest)
+    public SharePointFileListProcessor(Config config, ILogger logger, AuthenticationResult authentication, ClientContext clientDest)
     {
         _logger = logger;
+        _authentication = authentication;
         _clientDest = clientDest;
         _config = config;
     }
     public async Task Init()
     {
         _application = await AuthUtils.GetNewClientApp(_config);
-        _sharePointFileDownloader = new SharePointFileDownloader(_application, _config, _logger);
+        _sharePointFileDownloader = new SharePointFileDownloader(_authentication, _logger);
         _listCache = new ListCache(_clientDest, _logger, () => _fileUploadResults.LogThrottle(ThottleUploadStage.ListLookup));
         _folderCache = new FolderCache(_clientDest, _logger, () => _fileUploadResults.LogThrottle(ThottleUploadStage.FolderCreate));
     }

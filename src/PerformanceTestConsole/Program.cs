@@ -7,6 +7,7 @@ using Engine.SharePoint;
 using Engine.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client;
 using Microsoft.SharePoint.Client;
 
 Console.WriteLine("Hello, World!");
@@ -34,8 +35,10 @@ var sourceTokenManager = new SPOTokenManager(_config, copyCfg.CurrentWebUrl, _lo
 var sourceFiles = await sourceCrawler.CrawlListAllPages(new SPOListLoader(sourceListGuid, sourceTokenManager, _logger), copyCfg.RelativeUrlToCopy);
 
 var tokenManagerDestSite = new SPOTokenManager(_config, copyCfg.DestinationWebUrl, _logger);
-var clientDest = await tokenManagerDestSite.GetOrRefreshContext();
+AuthenticationResult? authResult = null;
+var clientDest = await tokenManagerDestSite.GetOrRefreshContext(t => authResult = t);
+
 
 var m = new FileMigrationManager(_logger);
-await m.CompleteCopy(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg }, new SharePointFileListProcessor(_config, _logger, clientDest));
+await m.CompleteCopy(new FileCopyBatch { Files = sourceFiles.FilesFound, Request = copyCfg }, new SharePointFileListProcessor(_config, _logger, authResult!, clientDest));
 

@@ -1,6 +1,7 @@
 ﻿using Engine.Configuration;
 using Engine.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client;
 using Microsoft.SharePoint.Client;
 
 namespace Engine.SharePoint;
@@ -27,8 +28,8 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
     }
 
 
-    public async Task CompleteCopyToSharePoint(FileCopyBatch batch, ClientContext clientContext)
+    public async Task CompleteCopyToSharePoint(FileCopyBatch batch, AuthenticationResult authentication, ClientContext clientContext)
     {
-        await CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, clientContext));
+        await CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, authentication, clientContext));
     }
 }

@@ -68,7 +68,10 @@ public class SBFunctions
             }
 
             // Make the copy
-            await _fileMigrationManager.CompleteCopyToSharePoint(update, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth!));
+            if (_auth != null)
+            {
+                await _fileMigrationManager.CompleteCopyToSharePoint(update, _auth, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth));
+            }
         }
         else
         {

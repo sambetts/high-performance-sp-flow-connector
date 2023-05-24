@@ -19,18 +19,20 @@ var builder = new ConfigurationBuilder()
 var configCollection = builder.Build();
 var config = new Config(configCollection);
 
+
+// Load the certificate to use
+var cert = await AuthUtils.RetrieveKeyVaultCertificate("AzureAutomationSPOAccess", config.AzureAdConfig.TenantId, config.AzureAdConfig.ClientId, config.AzureAdConfig.ClientSecret, config.KeyVaultUrl);
+
+
 var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         services.AddSingleton(config);
 
         // Add and configure PnP Core SDK
-        services.AddPnPCore(async options =>
+        services.AddPnPCore(options =>
         {
-            options.HttpRequests.Timeout = 10 * 60;
-
-            // Load the certificate to use
-            var cert = await AuthUtils.RetrieveKeyVaultCertificate("AzureAutomationSPOAccess", config.AzureAdConfig.TenantId, config.AzureAdConfig.ClientId, config.AzureAdConfig.ClientSecret, config.KeyVaultUrl);
+            options.HttpRequests.Timeout = 30 * 60;
 
             options.DefaultAuthenticationProvider = new X509CertificateAuthenticationProvider(config.AzureAdConfig.ClientId, config.AzureAdConfig.TenantId, cert)
             {
@@ -43,7 +45,7 @@ var host = new HostBuilder()
 var _logger = LoggerFactory.Create(config => { config.AddConsole(); }).CreateLogger("Test console");
 
 
-var testCopyRequest = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/Shared Documents",
+var testCopyRequest = new StartCopyRequest("https://m365x72460609.sharepoint.com/sites/Files", "/DocsSimple",
                "https://m365x72460609.sharepoint.com/sites/Files", "/Docs/FlowCopy", ConflictResolution.NewDesintationName, false);
 
 var sourceContext = await AuthUtils.GetClientContext(config, testCopyRequest.CurrentWebUrl, _logger, null);

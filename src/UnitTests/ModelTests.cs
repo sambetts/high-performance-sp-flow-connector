@@ -59,7 +59,7 @@ public class ModelTests
             },
         };
 
-        var largeFiles = d.FilesFound.GetLargeFiles();
+        var largeFiles = d.GetLargeFiles();
         Assert.IsTrue(largeFiles.Count == 1);
         Assert.IsTrue(largeFiles[0].FullSharePointUrl == "https://m365x352268.sharepoint.com/sites/Files/subsite/Shared Documents/subfolder/Contoso.mp4");
 

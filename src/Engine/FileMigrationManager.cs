@@ -26,9 +26,15 @@ public class FileMigrationManager
         // Get source files
         var crawler = new DataCrawler<PAGETOKENTYPE>(_logger);
         var sourceFiles = await crawler.CrawlListAllPages(listLoader, startCopyInfo.RelativeUrlToCopy);
-        _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files.");
 
-        // Push large files to queue in batches
+        // Sort into processing buckets. Big files can't be done by copy API, so they go to service bus
+
+        var rootFiles = sourceFiles.GetRootFilesAndFoldersBelowTwoGig();
+        var largeFiles = sourceFiles.GetLargeFiles();
+
+        _logger.LogInformation($"Copying {rootFiles.Count} files/folders to SPO Copy/Move API; {largeFiles.Count} out-of-scope files to async copy via Service Bus.");
+
+        // Push large files to SB queue
         var largeFilesListProcessor = new ListBatchProcessor<SharePointFileInfoWithList>(MAX_FILES_PER_BATCH, async (List<SharePointFileInfoWithList> chunk) => 
         {
             // Create a new class to process each chunk and send to service bus
@@ -36,7 +42,7 @@ public class FileMigrationManager
         });
 
         // Process large files on service-bus using CSOM
-        largeFilesListProcessor.AddRange(sourceFiles.FilesFound.GetLargeFiles());
+        largeFilesListProcessor.AddRange(largeFiles);
         largeFilesListProcessor.Flush();
 
         // Push large files to queue in batches
@@ -44,7 +50,6 @@ public class FileMigrationManager
             async(List<string> files) => await filesProcessor.ProcessRootFiles(new BaseItemsCopyBatch { FilesAndDirs = files, Request = startCopyInfo }) );
 
         // Process root files & folders directly with SP copy API
-        var rootFiles = sourceFiles.GetRootFilesAndFoldersBelowTwoGig();
         rootFilesListProcessor.AddRange(rootFiles);
         rootFilesListProcessor.Flush();
 
@@ -123,30 +128,4 @@ public class FileMigrationManager
             _logger.LogInformation($"Throttle stats: {Enum.GetName(stage)}: {r.Count}");
         }
     }
-}
-
-public abstract class BaseCopyBatch
-{
-    public StartCopyRequest Request { get; set; } = null!;
-
-    public virtual bool IsValid => Request != null && Request.IsValid;
-    internal string ToJson()
-    {
-        // Convert to json this object
-        return System.Text.Json.JsonSerializer.Serialize(this);
-    }
-}
-
-public class FileCopyBatch : BaseCopyBatch
-{
-    public List<SharePointFileInfoWithList> Files { get; set; } = new();
-    public override bool IsValid => Files.Count > 0 && base.IsValid;
-
-}
-
-public class BaseItemsCopyBatch : BaseCopyBatch
-{
-    public List<string> FilesAndDirs { get; set; } = new();
-    public override bool IsValid => FilesAndDirs.Count > 0 && base.IsValid;
-
 }

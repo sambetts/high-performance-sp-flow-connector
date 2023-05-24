@@ -1,4 +1,6 @@
-﻿namespace Engine.Models;
+﻿using Engine.SharePoint;
+
+namespace Engine.Models;
 
 /// <summary>
 /// From Flow inputs
@@ -44,3 +46,29 @@ public enum ConflictResolution
     Replace
 }
 
+
+public abstract class BaseCopyBatch
+{
+    public StartCopyRequest Request { get; set; } = null!;
+
+    public virtual bool IsValid => Request != null && Request.IsValid;
+    internal string ToJson()
+    {
+        // Convert to json this object
+        return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+}
+
+public class FileCopyBatch : BaseCopyBatch
+{
+    public List<SharePointFileInfoWithList> Files { get; set; } = new();
+    public override bool IsValid => Files.Count > 0 && base.IsValid;
+
+}
+
+public class BaseItemsCopyBatch : BaseCopyBatch
+{
+    public List<string> FilesAndDirs { get; set; } = new();
+    public override bool IsValid => FilesAndDirs.Count > 0 && base.IsValid;
+
+}

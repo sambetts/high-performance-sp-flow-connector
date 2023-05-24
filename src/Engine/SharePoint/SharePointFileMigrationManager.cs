@@ -7,18 +7,20 @@ using PnP.Core.Services;
 
 namespace Engine.SharePoint;
 
+/// <summary>
+/// SharePoint specific implementation of the FileMigrationManager
+/// </summary>
+/// <typeparam name="T">Logging category</typeparam>
 public class SharePointFileMigrationManager<T> : FileMigrationManager
 {
     private readonly Config _config;
-    private readonly IPnPContextFactory _contextFactory;
 
-    public SharePointFileMigrationManager(Config config, ILogger<T> logger, IPnPContextFactory contextFactory) : base(logger)
+    public SharePointFileMigrationManager(Config config, ILogger<T> logger) : base(logger)
     {
         _config = config;
-        _contextFactory = contextFactory;
     }
 
-    public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendToServiceBus(StartCopyRequest startCopyInfo)
+    public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendBigFilesToServiceBus(StartCopyRequest startCopyInfo, IPnPContextFactory contextFactory)
     {
         var sourceTokenManager = new SPOTokenManager(_config, startCopyInfo.CurrentWebUrl, _logger);
         var spClient = await sourceTokenManager.GetOrRefreshContext();
@@ -26,19 +28,17 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
 
         var guid = await SPOListLoader.GetListId(sourceInfo, spClient, _logger);
 
-        using (var context = await _contextFactory.CreateAsync(new Uri("https://contoso.sharepoint.com/sites/hr")))
+        using (var context = await contextFactory.CreateAsync(new Uri(startCopyInfo.CurrentWebUrl)))
         {
             await context.Web.LoadAsync(p => p.Title);
             Console.WriteLine($"Web title = {context.Web.Title}");
             var sbSend = new SharePointAndServiceBusFileResultManager(_config, _logger, context);
             return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
         }
-
     }
-
 
     public async Task CompleteCopyToSharePoint(FileCopyBatch batch, AuthenticationResult authentication, ClientContext clientContext)
     {
-        await CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, authentication, clientContext));
+        await base.CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, authentication, clientContext));
     }
 }

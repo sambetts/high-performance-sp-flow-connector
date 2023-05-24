@@ -282,7 +282,7 @@ public class FolderInfo : BaseItemInfo
 public static class DocLibCrawlContentsExtensions
 {
     const int TWO_GB = 2147483647;
-    public static List<SharePointFileInfoWithList> GetLargeFiles(this List<SharePointFileInfoWithList> files) => files.Where(f => f.FileSize > TWO_GB).ToList();
+    public static List<SharePointFileInfoWithList> GetLargeFiles(this DocLibCrawlContents d) => d.FilesFound.Where(f => f.FileSize > TWO_GB).ToList();
 
     public static List<string> GetRootFilesAndFoldersBelowTwoGig(this DocLibCrawlContents d) 
         => d.FilesFound.Where(f => f.FileSize < TWO_GB && f.Subfolder == string.Empty).Select(f => f.FullSharePointUrl)

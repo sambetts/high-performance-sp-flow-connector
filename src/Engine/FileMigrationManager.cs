@@ -10,7 +10,7 @@ namespace Engine;
 public class FileMigrationManager
 {
     protected readonly ILogger _logger;
-    const int MAX_FILES_PER_BATCH = 200;
+    const int MAX_FILES_PER_BATCH = 5;
 
     public FileMigrationManager(ILogger logger)
     {

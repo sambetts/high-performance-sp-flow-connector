@@ -7,6 +7,7 @@ using Engine.SharePoint;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using PnP.Core.Services;
 
 namespace Functions
 {
@@ -14,11 +15,13 @@ namespace Functions
     {
         private readonly ILogger<HttpFunctions> _logger;
         private readonly Config _config;
+        private readonly IPnPContextFactory _contextFactory;
 
-        public HttpFunctions(ILoggerFactory loggerFactory, Config config)
+        public HttpFunctions(ILoggerFactory loggerFactory, Config config, IPnPContextFactory contextFactory)
         {
             _logger = loggerFactory.CreateLogger<HttpFunctions>();
             _config = config;
+            _contextFactory = contextFactory;
         }
 
         [Function("FlowReceiver")]
@@ -50,7 +53,7 @@ namespace Functions
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
 
-                var m = new SharePointFileMigrationManager<HttpFunctions>(_config, _logger);
+                var m = new SharePointFileMigrationManager<HttpFunctions>(_config, _logger, _contextFactory);
                 await m.StartCopyAndSendToServiceBus(flowData);
 
                 return response;

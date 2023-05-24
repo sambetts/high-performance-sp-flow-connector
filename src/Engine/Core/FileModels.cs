@@ -285,6 +285,6 @@ public static class DocLibCrawlContentsExtensions
     public static List<SharePointFileInfoWithList> GetLargeFiles(this List<SharePointFileInfoWithList> files) => files.Where(f => f.FileSize > TWO_GB).ToList();
 
     public static List<string> GetRootFilesAndFoldersBelowTwoGig(this DocLibCrawlContents d) 
-        => d.FilesFound.Where(f => f.FileSize < TWO_GB).Select(f => f.FullSharePointUrl)
+        => d.FilesFound.Where(f => f.FileSize < TWO_GB && f.Subfolder == string.Empty).Select(f => f.FullSharePointUrl)
                 .Concat(d.FoldersFound.Where(f=> !string.IsNullOrEmpty(f.FolderPath) && !f.FolderPath.Contains("/")).Select(f=> f.FullSharePointUrl)).ToList();
 }

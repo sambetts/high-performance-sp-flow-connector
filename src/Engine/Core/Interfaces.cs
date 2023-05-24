@@ -16,5 +16,6 @@ public interface IFileListProcessor
 
 public interface IFileResultManager
 {
-    Task ProcessChunk(FileCopyBatch fileCopyBatch);
+    Task ProcessLargeFiles(FileCopyBatch fileCopyBatch);
+    Task ProcessRootFiles(BaseItemsCopyBatch absoluteUrls);
 }

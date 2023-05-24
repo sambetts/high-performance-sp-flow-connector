@@ -20,8 +20,18 @@ public class ModelTests
                     List = list1, 
                     SiteUrl = "https://m365x352268.sharepoint.com/sites",
                     WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                    Subfolder = "",
                     ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/Contoso.pptx", 
                     FileSize = 1 
+                },
+                new SharePointFileInfoWithList
+                {
+                    List = list1,
+                    SiteUrl = "https://m365x352268.sharepoint.com/sites",
+                    WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                    Subfolder = "folder",
+                    ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/folder/Contoso2-dont-include-in-root.pptx",
+                    FileSize = 1
                 },
                 new SharePointFileInfoWithList 
                 { 

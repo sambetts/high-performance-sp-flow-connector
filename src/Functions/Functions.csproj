@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.0.13" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.ServiceBus" Version="5.7.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.10.0" />
+    <PackageReference Include="PnP.Core.Auth" Version="1.9.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Engine\Engine.csproj" />

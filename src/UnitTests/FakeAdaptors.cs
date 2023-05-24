@@ -43,7 +43,12 @@ public class FailConfigurableTimesFileListProcessor : IFileListProcessor
 
 public class FakeChunkManager : IFileResultManager
 {
-    public Task ProcessChunk(FileCopyBatch fileCopyBatch)
+    public Task ProcessLargeFiles(FileCopyBatch fileCopyBatch)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task ProcessRootFiles(BaseItemsCopyBatch absoluteUrls)
     {
         return Task.CompletedTask;
     }

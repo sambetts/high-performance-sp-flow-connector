@@ -10,14 +10,14 @@ namespace Engine;
 public class FileMigrationManager
 {
     protected readonly ILogger _logger;
-    const int MAX_FILES_PER_BATCH = 5;
+    const int MAX_FILES_PER_BATCH = 30000;      // https://pnp.github.io/pnpcore/using-the-sdk/sites-copymovecontent.html#limitations
 
     public FileMigrationManager(ILogger logger)
     {
         _logger = logger;
     }
 
-    public async Task<List<SharePointFileInfoWithList>> StartCopy<PAGETOKENTYPE>(StartCopyRequest startCopyInfo, IListLoader<PAGETOKENTYPE> listLoader, IFileResultManager chunkProcessor)
+    public async Task<List<SharePointFileInfoWithList>> StartCopy<PAGETOKENTYPE>(StartCopyRequest startCopyInfo, IListLoader<PAGETOKENTYPE> listLoader, IFileResultManager filesProcessor)
     {
         // Parse command into usable objects
         var sourceInfo = new CopyInfo(startCopyInfo.CurrentWebUrl, startCopyInfo.RelativeUrlToCopy);
@@ -28,16 +28,25 @@ public class FileMigrationManager
         var sourceFiles = await crawler.CrawlListAllPages(listLoader, startCopyInfo.RelativeUrlToCopy);
         _logger.LogInformation($"Copying {sourceFiles.FilesFound.Count} files.");
 
-        // Push to queue in batches
-        var l = new ListBatchProcessor<SharePointFileInfoWithList>(MAX_FILES_PER_BATCH, async (List<SharePointFileInfoWithList> chunk) => 
+        // Push large files to queue in batches
+        var largeFilesListProcessor = new ListBatchProcessor<SharePointFileInfoWithList>(MAX_FILES_PER_BATCH, async (List<SharePointFileInfoWithList> chunk) => 
         {
             // Create a new class to process each chunk and send to service bus
-            await chunkProcessor.ProcessChunk(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
+            await filesProcessor.ProcessLargeFiles(new FileCopyBatch { Files = chunk, Request = startCopyInfo });
         });
 
-        // Process all files
-        l.AddRange(sourceFiles.FilesFound);
-        l.Flush();
+        // Process large files on service-bus using CSOM
+        largeFilesListProcessor.AddRange(sourceFiles.FilesFound.GetLargeFiles());
+        largeFilesListProcessor.Flush();
+
+        // Push large files to queue in batches
+        var rootFilesListProcessor = new ListBatchProcessor<string>(MAX_FILES_PER_BATCH, 
+            async(List<string> files) => await filesProcessor.ProcessRootFiles(new BaseItemsCopyBatch { FilesAndDirs = files, Request = startCopyInfo }) );
+
+        // Process root files & folders directly with SP copy API
+        var rootFiles = sourceFiles.GetRootFilesAndFoldersBelowTwoGig();
+        rootFilesListProcessor.AddRange(rootFiles);
+        rootFilesListProcessor.Flush();
 
         return sourceFiles.FilesFound;
     }
@@ -116,17 +125,28 @@ public class FileMigrationManager
     }
 }
 
-public class FileCopyBatch
+public abstract class BaseCopyBatch
 {
     public StartCopyRequest Request { get; set; } = null!;
 
-    public List<SharePointFileInfoWithList> Files { get; set; } = new();
-    public bool IsValid => Files.Count > 0 && Request != null && Request.IsValid;
-
+    public virtual bool IsValid => Request != null && Request.IsValid;
     internal string ToJson()
     {
         // Convert to json this object
         return System.Text.Json.JsonSerializer.Serialize(this);
-
     }
+}
+
+public class FileCopyBatch : BaseCopyBatch
+{
+    public List<SharePointFileInfoWithList> Files { get; set; } = new();
+    public override bool IsValid => Files.Count > 0 && base.IsValid;
+
+}
+
+public class BaseItemsCopyBatch : BaseCopyBatch
+{
+    public List<string> FilesAndDirs { get; set; } = new();
+    public override bool IsValid => FilesAndDirs.Count > 0 && base.IsValid;
+
 }

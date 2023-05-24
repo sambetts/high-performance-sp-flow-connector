@@ -3,15 +3,19 @@ using Engine.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.SharePoint.Client;
+using PnP.Core.Services;
 
 namespace Engine.SharePoint;
 
 public class SharePointFileMigrationManager<T> : FileMigrationManager
 {
     private readonly Config _config;
-    public SharePointFileMigrationManager(Config config, ILogger<T> logger) : base(logger)
+    private readonly IPnPContextFactory _contextFactory;
+
+    public SharePointFileMigrationManager(Config config, ILogger<T> logger, IPnPContextFactory contextFactory) : base(logger)
     {
         _config = config;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<SharePointFileInfoWithList>> StartCopyAndSendToServiceBus(StartCopyRequest startCopyInfo)
@@ -22,9 +26,14 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
 
         var guid = await SPOListLoader.GetListId(sourceInfo, spClient, _logger);
 
-        var sbSend = new SBFileResultManager(_config, _logger);
+        using (var context = await _contextFactory.CreateAsync(new Uri("https://contoso.sharepoint.com/sites/hr")))
+        {
+            await context.Web.LoadAsync(p => p.Title);
+            Console.WriteLine($"Web title = {context.Web.Title}");
+            var sbSend = new SharePointAndServiceBusFileResultManager(_config, _logger, context);
+            return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
+        }
 
-        return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
     }
 
 

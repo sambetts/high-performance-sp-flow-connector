@@ -1,5 +1,6 @@
 ﻿using Engine.Core;
 using Engine.Models;
+using Engine.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.SharePoint.Client;
 
@@ -151,7 +152,13 @@ public class SPOListLoader : IListLoader<ListItemCollectionPosition>
             }
             else
             {
-                pageResults.FoldersFound.Add(itemUrl!);
+                var f = new FolderInfo 
+                { 
+                    ServerRelativeFilePath = itemUrl!, 
+                    WebUrl = spClientList.Web.Url,
+                    FolderPath = itemUrl!.TrimStringFromStart(listModel.ServerRelativeUrl + "/"),
+                };
+                pageResults.FoldersFound.Add(f);
             }
         }
 

@@ -7,7 +7,58 @@ namespace UnitTests;
 [TestClass]
 public class ModelTests
 {
-    
+    [TestMethod]
+    public void DocLibCrawlContentsExtensionsTests()
+    {
+        var list1 = new SiteList { ServerRelativeUrl = "/list1", Title = "List 1" };
+        var d = new DocLibCrawlContents
+        {
+            FilesFound = new List<SharePointFileInfoWithList>
+            {
+                new SharePointFileInfoWithList 
+                { 
+                    List = list1, 
+                    SiteUrl = "https://m365x352268.sharepoint.com/sites",
+                    WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                    ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/Contoso.pptx", 
+                    FileSize = 1 
+                },
+                new SharePointFileInfoWithList 
+                { 
+                    List = list1,
+                    SiteUrl = "https://m365x352268.sharepoint.com/sites",
+                    WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                    ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/subfolder/Contoso.mp4", 
+                    FileSize = 2147483648 
+                },   // 2gb + 1 byte
+            },
+            FoldersFound = new List<FolderInfo> 
+            { 
+                new FolderInfo
+                { 
+                    FolderPath = "Root folder",
+                    ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/Root folder",
+                    WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                },
+                new FolderInfo
+                { 
+                    FolderPath = "Root folder/subfolder1",
+                    ServerRelativeFilePath = "/sites/Files/subsite/Shared Documents/Root folder/subfolder1",
+                    WebUrl = "https://m365x352268.sharepoint.com/sites/Files/subsite",
+                }
+            },
+        };
+
+        var largeFiles = d.FilesFound.GetLargeFiles();
+        Assert.IsTrue(largeFiles.Count == 1);
+        Assert.IsTrue(largeFiles[0].FullSharePointUrl == "https://m365x352268.sharepoint.com/sites/Files/subsite/Shared Documents/subfolder/Contoso.mp4");
+
+        var filesAndFolders = d.GetRootFilesAndFoldersBelowTwoGig();    
+        Assert.IsTrue(filesAndFolders.Count == 2);
+        Assert.IsTrue(filesAndFolders.Contains("https://m365x352268.sharepoint.com/sites/Files/subsite/Shared Documents/Contoso.pptx"));
+        Assert.IsTrue(filesAndFolders.Contains("https://m365x352268.sharepoint.com/sites/Files/subsite/Shared Documents/Root folder"));
+    }
+
     [TestMethod]
     public void TrimStringFromStart()
     {

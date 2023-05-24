@@ -23,10 +23,56 @@ public class DocLib : SiteList
     public DocLib() { }
     public string DriveId { get; set; } = string.Empty;
 }
+
+public abstract class BaseItemInfo
+{
+    /// <summary>
+    /// Example: /sites/MigrationHost/Shared%20Documents/Contoso.pptx
+    /// </summary>
+    public string ServerRelativeFilePath { get; set; } = string.Empty;
+    /// <summary>
+    /// Example: https://m365x352268.sharepoint.com/sites/MigrationHost/subsite
+    /// </summary>
+    public string WebUrl { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Calculated. Web + file URL, minus overlap, if both are valid.
+    /// </summary>
+    [JsonIgnore]
+    public string FullSharePointUrl
+    {
+        get
+        {
+            // Strip out relative web part of file URL
+            const string DOMAIN = "sharepoint.com";
+            var domainStart = WebUrl.IndexOf(DOMAIN, StringComparison.CurrentCultureIgnoreCase);
+            if (domainStart > -1)     
+            {
+                var webMinusServer = WebUrl.Substring(domainStart + DOMAIN.Length, (WebUrl.Length - domainStart) - DOMAIN.Length);
+
+                if (ServerRelativeFilePath.StartsWith(webMinusServer))
+                {
+                    var filePathWithoutWeb = ServerRelativeFilePath.Substring(webMinusServer.Length, ServerRelativeFilePath.Length - webMinusServer.Length);
+
+                    return WebUrl + filePathWithoutWeb;
+                }
+                else
+                {
+                    return ServerRelativeFilePath;
+                }
+            }
+            else
+            {
+                return ServerRelativeFilePath;
+            }
+        }
+    }
+}
+
 /// <summary>
 /// SharePoint Online file metadata for base file-type
 /// </summary>
-public class BaseSharePointFileInfo
+public class BaseSharePointFileInfo : BaseItemInfo
 {
     public BaseSharePointFileInfo() { }
     public BaseSharePointFileInfo(BaseSharePointFileInfo driveArg) : this()
@@ -45,15 +91,6 @@ public class BaseSharePointFileInfo
     /// </summary>
     public string SiteUrl { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Example: https://m365x352268.sharepoint.com/sites/MigrationHost/subsite
-    /// </summary>
-    public string WebUrl { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Example: /sites/MigrationHost/Shared%20Documents/Contoso.pptx
-    /// </summary>
-    public string ServerRelativeFilePath { get; set; } = string.Empty;
 
     public string Author { get; set; } = string.Empty;
 
@@ -101,38 +138,6 @@ public class BaseSharePointFileInfo
         return $"{this.ServerRelativeFilePath}";
     }
 
-    /// <summary>
-    /// Calculated. Web + file URL, minus overlap, if both are valid.
-    /// </summary>
-    [JsonIgnore]
-    public string FullSharePointUrl
-    {
-        get
-        {
-            // Strip out relative web part of file URL
-            const string DOMAIN = "sharepoint.com";
-            var domainStart = WebUrl.IndexOf(DOMAIN, StringComparison.CurrentCultureIgnoreCase);
-            if (domainStart > -1 && ValidSubFolderIfSpecified)      // Basic checks. IsValidInfo uses this prop so can't use that.
-            {
-                var webMinusServer = WebUrl.Substring(domainStart + DOMAIN.Length, (WebUrl.Length - domainStart) - DOMAIN.Length);
-
-                if (ServerRelativeFilePath.StartsWith(webMinusServer))
-                {
-                    var filePathWithoutWeb = ServerRelativeFilePath.Substring(webMinusServer.Length, ServerRelativeFilePath.Length - webMinusServer.Length);
-
-                    return WebUrl + filePathWithoutWeb;
-                }
-                else
-                {
-                    return ServerRelativeFilePath;
-                }
-            }
-            else
-            {
-                return ServerRelativeFilePath;
-            }
-        }
-    }
 }
 
 public class SharePointFileInfoWithList : BaseSharePointFileInfo
@@ -263,5 +268,23 @@ public class DocLibCrawlContents
 {
     public List<SharePointFileInfoWithList> FilesFound { get; set; } = new();
 
-    public List<string> FoldersFound { get; set; } = new();
+    public List<FolderInfo> FoldersFound { get; set; } = new();
+}
+
+public class FolderInfo : BaseItemInfo
+{
+    /// <summary>
+    /// Example: "folder1/subfolder1"
+    /// </summary>
+    public string FolderPath { get; set; } = null!;
+}
+
+public static class DocLibCrawlContentsExtensions
+{
+    const int TWO_GB = 2147483647;
+    public static List<SharePointFileInfoWithList> GetLargeFiles(this List<SharePointFileInfoWithList> files) => files.Where(f => f.FileSize > TWO_GB).ToList();
+
+    public static List<string> GetRootFilesAndFoldersBelowTwoGig(this DocLibCrawlContents d) 
+        => d.FilesFound.Where(f => f.FileSize < TWO_GB).Select(f => f.FullSharePointUrl)
+                .Concat(d.FoldersFound.Where(f=> !string.IsNullOrEmpty(f.FolderPath) && !f.FolderPath.Contains("/")).Select(f=> f.FullSharePointUrl)).ToList();
 }

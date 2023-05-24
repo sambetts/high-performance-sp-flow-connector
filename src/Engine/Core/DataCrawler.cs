@@ -23,7 +23,7 @@ public class DataCrawler<PAGETOKENTYPE>
         var listResultsAll = new DocLibCrawlContents();
         PAGETOKENTYPE? token = default;
 
-        var allFolders = new List<string>();
+        var allFolders = new List<FolderInfo>();
 
         int pageCount = 1;
         while (listPage == null || listPage.NextPageToken != null)

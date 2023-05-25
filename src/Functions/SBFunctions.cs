@@ -7,24 +7,28 @@ using Engine.Utils;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
+using PnP.Core.Services;
 
 namespace Functions;
 
 public class SBFunctions
 {
     private readonly ILogger _logger;
-    private readonly SharePointFileMigrationManager<SBFunctions> _fileMigrationManager;
+    private readonly SharePointFileMigrationManager _fileMigrationManager;
     private readonly Config _config;
-
-    private static AuthenticationResult? _auth = null;
+    private readonly IPnPContextFactory _contextFactory;
+    private readonly IAzureStorageManager _azureStorageManager;
+    private static AuthenticationResult? _appAuth = null;
     private static IConfidentialClientApplication? _confidentialClientApplication = null;
     private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-    public SBFunctions(ILoggerFactory loggerFactory, SharePointFileMigrationManager<SBFunctions> fileMigrationManager, Config config)
+    public SBFunctions(ILoggerFactory loggerFactory, SharePointFileMigrationManager fileMigrationManager, Config config, IPnPContextFactory contextFactory, IAzureStorageManager azureStorageManager)
     {
         _logger = loggerFactory.CreateLogger<SBFunctions>();
         _fileMigrationManager = fileMigrationManager;
         _config = config;
+        _contextFactory = contextFactory;
+        _azureStorageManager = azureStorageManager;
     }
 
     [Function(nameof(ProcessFileOperation))]
@@ -37,46 +41,89 @@ public class SBFunctions
             return;
         }
 
+        // We can get a couple of different message types. Todo: improve this. 
         FileCopyBatch? fileCopyRequest = null;
         try
         {
             fileCopyRequest = JsonSerializer.Deserialize<FileCopyBatch>(messageContents);
         }
-        catch (Exception ex)
+        catch (JsonException)
         {
-            _logger.LogError(ex.Message, ex);
+            // Ignore
+        }
+
+        AsyncStartCopyRequest? startCopyRequest = null;
+        try
+        {
+            startCopyRequest = JsonSerializer.Deserialize<AsyncStartCopyRequest>(messageContents);
+        }
+        catch (JsonException)
+        {
+            // Ignore
         }
 
         if (fileCopyRequest != null && fileCopyRequest.IsValid)
         {
-            // Ensure we only have one thread at a time trying to get a new token
-            await semaphoreSlim.WaitAsync();
-            try
-            {
-                // Cache creds where possible to avoid hitting KV and SPO too often
-                if (_confidentialClientApplication == null)
-                {
-                    _confidentialClientApplication = await AuthUtils.GetNewClientApp(_config);
-                }
-                if (SPOTokenManager.NeedsRefresh(_auth))
-                {
-                    _auth = await _confidentialClientApplication.AuthForSharePointOnline(_config.BaseSPOAddress);
-                }
-            }
-            finally
-            {
-                semaphoreSlim.Release();
-            }
+            await RefreshCachedAppAuthIfNeeded();
 
             // Make the copy
-            if (_auth != null)
+            if (_appAuth != null)
             {
-                await _fileMigrationManager.CompleteCopyToSharePoint(fileCopyRequest, _auth, AuthUtils.GetClientContext(fileCopyRequest.Request.DestinationWebUrl, _auth));
+                await _fileMigrationManager.CompleteCopyToSharePoint(fileCopyRequest, _appAuth, AuthUtils.GetClientContext(fileCopyRequest.Request.DestinationWebUrl, _appAuth));
+            }
+        }
+        else if (startCopyRequest != null && startCopyRequest.IsValid)
+        {
+            await RefreshCachedAppAuthIfNeeded();
+            if (_appAuth != null)
+            {
+                var errorText = string.Empty;
+                try
+                {
+                    await _fileMigrationManager.StartCopyAndSendBigFilesToServiceBus(startCopyRequest.StartCopyRequest, _contextFactory);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error copying files");
+                    errorText = ex.Message;
+                }
+
+                // Update job status
+                if (!string.IsNullOrEmpty(errorText))
+                {
+                    await _azureStorageManager.SetNewMigrationStatus(startCopyRequest.RequestId, errorText, true);
+                }
+                else
+                {
+                    await _azureStorageManager.SetNewMigrationStatus(startCopyRequest.RequestId, null, true);
+                }
             }
         }
         else
         {
             _logger.LogWarning($"Invalid message received from service-bus: '{messageContents}'");
+        }
+    }
+
+    async Task RefreshCachedAppAuthIfNeeded()
+    {
+        // Ensure we only have one thread at a time trying to get a new token
+        await semaphoreSlim.WaitAsync();
+        try
+        {
+            // Cache creds where possible to avoid hitting KV and SPO too often
+            if (_confidentialClientApplication == null)
+            {
+                _confidentialClientApplication = await AuthUtils.GetNewClientApp(_config);
+            }
+            if (SPOTokenManager.NeedsRefresh(_appAuth))
+            {
+                _appAuth = await _confidentialClientApplication.AuthForSharePointOnline(_config.BaseSPOAddress);
+            }
+        }
+        finally
+        {
+            semaphoreSlim.Release();
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Engine.SharePoint;
+using System.Text.Json.Serialization;
 
 namespace Engine.Models;
 
@@ -8,6 +9,21 @@ namespace Engine.Models;
 public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution, bool DeleteAfterCopy)
 {
     public bool IsValid => !string.IsNullOrEmpty(CurrentWebUrl) && !string.IsNullOrEmpty(RelativeUrlToCopy) && !string.IsNullOrEmpty(DestinationWebUrl) && !string.IsNullOrEmpty(RelativeUrlDestination);
+}
+
+public class AsyncStartCopyRequest
+{
+    public AsyncStartCopyRequest(StartCopyRequest startCopyRequest, string requestId)
+    {
+        StartCopyRequest = startCopyRequest;
+        RequestId = requestId;
+    }
+
+    [JsonIgnore]
+    public bool IsValid => StartCopyRequest != null && !string.IsNullOrEmpty(RequestId);
+
+    public StartCopyRequest StartCopyRequest { get; set; }
+    public string RequestId { get; set; }
 }
 
 /// <summary>
@@ -58,6 +74,7 @@ public abstract class BaseCopyBatch : BaseClass
 {
     public StartCopyRequest Request { get; set; } = null!;
 
+    [JsonIgnore]
     public virtual bool IsValid => Request != null && Request.IsValid;
 
 }
@@ -65,6 +82,8 @@ public abstract class BaseCopyBatch : BaseClass
 public class FileCopyBatch : BaseCopyBatch
 {
     public List<SharePointFileInfoWithList> Files { get; set; } = new();
+
+    [JsonIgnore]
     public override bool IsValid => Files.Count > 0 && base.IsValid;
 
 }
@@ -72,6 +91,8 @@ public class FileCopyBatch : BaseCopyBatch
 public class BaseItemsCopyBatch : BaseCopyBatch
 {
     public List<string> FilesAndDirs { get; set; } = new();
+
+    [JsonInclude]
     public override bool IsValid => FilesAndDirs.Count > 0 && base.IsValid;
 
 }

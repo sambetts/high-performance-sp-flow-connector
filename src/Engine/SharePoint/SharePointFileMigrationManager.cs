@@ -12,11 +12,11 @@ namespace Engine.SharePoint;
 /// SharePoint specific implementation of the FileMigrationManager
 /// </summary>
 /// <typeparam name="T">Logging category</typeparam>
-public class SharePointFileMigrationManager<T> : FileMigrationManager
+public class SharePointFileMigrationManager : FileMigrationManager
 {
     private readonly Config _config;
 
-    public SharePointFileMigrationManager(Config config, ILogger<T> logger) : base(logger)
+    public SharePointFileMigrationManager(Config config, ILogger<SharePointFileMigrationManager> logger) : base(logger)
     {
         _config = config;
     }
@@ -36,7 +36,7 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
         }
     }
 
-    public async Task<string> SendCopyJobToSB(StartCopyRequest startCopyInfo)
+    public async Task SendCopyJobToServiceBusAndRegisterNewJob(AsyncStartCopyRequest startCopyInfo, IAzureStorageManager azureStorageManager)
     {
         var client = new ServiceBusClient(_config.ConnectionStrings.ServiceBus);
         var m = new ServiceBusMessage(System.Text.Json.JsonSerializer.Serialize(startCopyInfo));
@@ -44,7 +44,9 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
         var _serviceBusSender = client.CreateSender(_config.QueueNameOperations);
         await _serviceBusSender.SendMessageAsync(m);
         _logger.LogInformation($"Sent file copy request to service bus to process async");
-        return m.MessageId;
+
+
+        await azureStorageManager.SetNewMigrationStatus(startCopyInfo.RequestId, null, false);
     }
 
     public async Task CompleteCopyToSharePoint(FileCopyBatch batch, AuthenticationResult authentication, ClientContext clientContext)

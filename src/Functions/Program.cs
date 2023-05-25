@@ -1,3 +1,4 @@
+using Engine;
 using Engine.Configuration;
 using Engine.SharePoint;
 using Engine.Utils;
@@ -33,8 +34,9 @@ var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         services.AddSingleton(config);
-        services.AddSingleton<SharePointFileMigrationManager<SBFunctions>>();
-        services.AddSingleton<TaskQueueManager>();
+        var storageManager = new AzureStorageManager(config.ConnectionStrings.Storage);
+        services.AddSingleton<IAzureStorageManager>(storageManager);
+        services.AddSingleton<SharePointFileMigrationManager>();
 
         // Add and configure PnP Core SDK
         services.AddPnPCore(options =>

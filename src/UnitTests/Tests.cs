@@ -28,20 +28,6 @@ public class Tests
         }).CreateLogger("Unit tests");
     }
 
-
-    [TestMethod]
-    public async Task TaskQueueManagerTests()
-    {
-        var t = new TaskQueueManager();
-        var guid = t.AddNew(Task.Run(async () => { await Task.Delay(100); }));
-        Assert.IsFalse(t.GetTask(guid).IsCompleted);
-
-        await Task.Delay(1010);
-        Assert.IsTrue(t.GetTask(guid).IsCompleted);
-
-        t.Remove(guid);
-    }
-
     [TestMethod]
     public async Task FakeLoadersFileMigrationManagerTests()
     {

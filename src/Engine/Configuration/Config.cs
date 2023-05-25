@@ -8,7 +8,11 @@ public class Config : BaseConfig
     }
 
     [ConfigValue]
-    public string BaseServerAddress { get; set; } = string.Empty;
+    public string BaseSPOAddress { get; set; } = string.Empty;
+
+
+    [ConfigValue]
+    public string BaseFunctionsAppAddress { get; set; } = string.Empty;
 
     [ConfigValue]
     public string KeyVaultUrl { get; set; } = string.Empty;

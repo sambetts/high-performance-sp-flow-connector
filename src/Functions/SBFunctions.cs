@@ -60,7 +60,7 @@ public class SBFunctions
                 }
                 if (SPOTokenManager.NeedsRefresh(_auth))
                 {
-                    _auth = await _confidentialClientApplication.AuthForSharePointOnline(_config.BaseServerAddress);
+                    _auth = await _confidentialClientApplication.AuthForSharePointOnline(_config.BaseSPOAddress);
                 }
             }
             finally

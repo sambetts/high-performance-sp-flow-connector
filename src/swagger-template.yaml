@@ -41,6 +41,19 @@ paths:
                 type: integer
                 format: int32
                 description: conflictResolution
+  /api/CheckMigration:
+    get:
+      responses:
+        default:
+          description: default
+          schema: {}
+      parameters:
+        - name: taskId
+          in: query
+          required: false
+          type: string
+      summary: GetStatus
+      operationId: GetStatus
 definitions: {}
 parameters: {}
 responses: {}

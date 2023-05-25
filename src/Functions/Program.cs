@@ -34,6 +34,7 @@ var host = new HostBuilder()
     {
         services.AddSingleton(config);
         services.AddSingleton<SharePointFileMigrationManager<SBFunctions>>();
+        services.AddSingleton<TaskQueueManager>();
 
         // Add and configure PnP Core SDK
         services.AddPnPCore(options =>

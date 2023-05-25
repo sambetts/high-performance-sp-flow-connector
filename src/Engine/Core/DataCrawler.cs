@@ -24,7 +24,7 @@ public class DataCrawler<PAGETOKENTYPE>
         PAGETOKENTYPE? token = default;
 
         var allFolders = new List<FolderInfo>();
-
+        _tracer.LogInformation("Starting crawl of source");
         int pageCount = 1;
         while (listPage == null || listPage.NextPageToken != null)
         {

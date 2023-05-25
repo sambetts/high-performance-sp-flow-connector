@@ -1,4 +1,5 @@
-﻿using Engine.Configuration;
+﻿using Azure.Messaging.ServiceBus;
+using Engine.Configuration;
 using Engine.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
@@ -30,11 +31,20 @@ public class SharePointFileMigrationManager<T> : FileMigrationManager
 
         using (var context = await contextFactory.CreateAsync(new Uri(startCopyInfo.CurrentWebUrl)))
         {
-            await context.Web.LoadAsync(p => p.Title);
-            Console.WriteLine($"Web title = {context.Web.Title}");
             var sbSend = new SharePointAndServiceBusFileResultManager(_config, _logger, context);
             return await base.StartCopy(startCopyInfo, new SPOListLoader(guid, sourceTokenManager, _logger), sbSend);
         }
+    }
+
+    public async Task<string> SendCopyJobToSB(StartCopyRequest startCopyInfo)
+    {
+        var client = new ServiceBusClient(_config.ConnectionStrings.ServiceBus);
+        var m = new ServiceBusMessage(System.Text.Json.JsonSerializer.Serialize(startCopyInfo));
+
+        var _serviceBusSender = client.CreateSender(_config.QueueNameOperations);
+        await _serviceBusSender.SendMessageAsync(m);
+        _logger.LogInformation($"Sent file copy request to service bus to process async");
+        return m.MessageId;
     }
 
     public async Task CompleteCopyToSharePoint(FileCopyBatch batch, AuthenticationResult authentication, ClientContext clientContext)

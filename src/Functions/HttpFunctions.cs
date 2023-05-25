@@ -73,7 +73,7 @@ public class HttpFunctions
     }
 
     [Function("FlowReceiver")]
-    public HttpResponseData StartMigration([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+    public async HttpResponseData StartMigration([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
         _logger.LogInformation("FlowReceiver HTTP trigger function processed a request.");
 
@@ -100,8 +100,11 @@ public class HttpFunctions
         if (flowData != null && flowData.IsValid)
         {
             var m = new SharePointFileMigrationManager<HttpFunctions>(_config, _logger);
-            //var migrationTask = m.StartCopyAndSendBigFilesToServiceBus(flowData, _contextFactory);
-            var newtaskId = _taskQueueManager.AddNew(Task.Run(async () => { await Task.Delay(10000); }));
+            var migrationId = await m.SendCopyJobToSB(flowData);
+
+            // Add job to service bus
+
+            var newtaskId = _taskQueueManager.AddNew(migrationTask);
 
             return ReturnWorkingOnIt(req, newtaskId);
         }

@@ -46,17 +46,20 @@ public enum ConflictResolution
     Replace
 }
 
+public abstract class BaseClass
+{
+    public string ToJson()
+    {
+        return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+}
 
-public abstract class BaseCopyBatch
+public abstract class BaseCopyBatch : BaseClass
 {
     public StartCopyRequest Request { get; set; } = null!;
 
     public virtual bool IsValid => Request != null && Request.IsValid;
-    internal string ToJson()
-    {
-        // Convert to json this object
-        return System.Text.Json.JsonSerializer.Serialize(this);
-    }
+
 }
 
 public class FileCopyBatch : BaseCopyBatch

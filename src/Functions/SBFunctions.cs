@@ -37,17 +37,17 @@ public class SBFunctions
             return;
         }
 
-        FileCopyBatch? update = null;
+        FileCopyBatch? fileCopyRequest = null;
         try
         {
-            update = JsonSerializer.Deserialize<FileCopyBatch>(messageContents);
+            fileCopyRequest = JsonSerializer.Deserialize<FileCopyBatch>(messageContents);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex.Message, ex);
         }
 
-        if (update != null && update.IsValid)
+        if (fileCopyRequest != null && fileCopyRequest.IsValid)
         {
             // Ensure we only have one thread at a time trying to get a new token
             await semaphoreSlim.WaitAsync();
@@ -71,7 +71,7 @@ public class SBFunctions
             // Make the copy
             if (_auth != null)
             {
-                await _fileMigrationManager.CompleteCopyToSharePoint(update, _auth, AuthUtils.GetClientContext(update.Request.DestinationWebUrl, _auth));
+                await _fileMigrationManager.CompleteCopyToSharePoint(fileCopyRequest, _auth, AuthUtils.GetClientContext(fileCopyRequest.Request.DestinationWebUrl, _auth));
             }
         }
         else

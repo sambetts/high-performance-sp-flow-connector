@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Engine.Configuration;
 using Engine.Models;
+using Engine.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.SharePoint.Client;
@@ -52,5 +53,43 @@ public class SharePointFileMigrationManager : FileMigrationManager
     public async Task CompleteCopyToSharePoint(FileCopyBatch batch, AuthenticationResult authentication, ClientContext clientContext)
     {
         await base.CompleteCopy(batch, new SharePointFileListProcessor(_config, _logger, authentication, clientContext));
+    }
+
+    public async Task<bool> CheckDestinationAndSourceExist(StartCopyRequest flowStartCopyData)
+    {
+        // Check webs
+        if (!(flowStartCopyData.CurrentWebUrl.StartsWith(_config.BaseSPOAddress) && flowStartCopyData.DestinationWebUrl.StartsWith(_config.BaseSPOAddress)))
+        {
+            return false;
+        }
+        var baseUrlSource = flowStartCopyData.CurrentWebUrl.TrimStringFromStart(_config.BaseSPOAddress);
+        var baseUrlDest = flowStartCopyData.DestinationWebUrl.TrimStringFromStart(_config.BaseSPOAddress);
+
+        var sourceTokenManager = new SPOTokenManager(_config, flowStartCopyData.CurrentWebUrl, _logger);
+        var sourceClient = await sourceTokenManager.GetOrRefreshContext();
+        var sourceFolderExists = await CheckExists(baseUrlSource + flowStartCopyData.RelativeUrlToCopy, sourceClient);
+
+        var destTokenManager = new SPOTokenManager(_config, flowStartCopyData.CurrentWebUrl, _logger);
+        var destClient = await destTokenManager.GetOrRefreshContext();
+
+        var destFolderExists = await CheckExists(baseUrlDest + flowStartCopyData.RelativeUrlDestination, destClient);
+
+        return sourceFolderExists && destFolderExists;
+    }
+
+    private async Task<bool> CheckExists(string relativeUrlToCopy, ClientContext sourceClient)
+    {
+        var f = sourceClient.Web.GetFolderByServerRelativePath(ResourcePath.FromDecodedUrl(relativeUrlToCopy));
+        sourceClient.Load(f);
+
+        try
+        {
+            await sourceClient.ExecuteQueryAsyncWithThrottleRetries(_logger);
+        }
+        catch (ServerException ex) when (ex.Message.Contains("File Not Found"))
+        {
+            return false;
+        }
+        return true;
     }
 }

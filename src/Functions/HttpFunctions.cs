@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Azure;
 using Engine;
 using Engine.Configuration;
 using Engine.Models;
@@ -68,7 +69,7 @@ public class HttpFunctions
             }
         }
 
-        return req.CreateResponse(HttpStatusCode.BadRequest);
+        return await ReturnBadRequest(req, "Invalid request ID");
     }
 
     [Function("FlowReceiver")]
@@ -98,20 +99,39 @@ public class HttpFunctions
         }
         if (flowStartCopyData != null && flowStartCopyData.IsValid)
         {
-            var newAsyncStartCopyRequest = new AsyncStartCopyRequest(flowStartCopyData, Guid.NewGuid().ToString());
+            if (!flowStartCopyData.IsForTenant(_config.BaseSPOAddress))
+            {
+                return await ReturnBadRequest(httpRequest, $"Request is for webs not under {_config.BaseSPOAddress}");
+            }
+            var destinationAndSourceExist = await _fileMigrationManager.CheckDestinationAndSourceExist(flowStartCopyData);
+            if (destinationAndSourceExist)
+            {
+                var newAsyncStartCopyRequest = new AsyncStartCopyRequest(flowStartCopyData, Guid.NewGuid().ToString());
 
-            // Add job to service bus
-            await _fileMigrationManager.SendCopyJobToServiceBusAndRegisterNewJob(newAsyncStartCopyRequest, _azureStorageManager);
+                // Add job to service bus
+                await _fileMigrationManager.SendCopyJobToServiceBusAndRegisterNewJob(newAsyncStartCopyRequest, _azureStorageManager);
 
-            // Keep the Flow running
-            return ReturnWorkingOnIt(httpRequest, newAsyncStartCopyRequest.RequestId);
+                // Keep the Flow running
+                return ReturnWorkingOnIt(httpRequest, newAsyncStartCopyRequest.RequestId);
+            }
+            else
+            {
+                var msg = $"Either source or destination webs/folders do not exist";
+                return await ReturnBadRequest(httpRequest, msg);
+            }
         }
         else
         {
-            _logger.LogWarning($"Got invalid Json from HTTP request: '{bodyStr}'");
-            var response = httpRequest.CreateResponse(HttpStatusCode.BadRequest);
-            return response;
+            return await ReturnBadRequest(httpRequest, $"Got invalid Json from HTTP request: '{bodyStr}'");
         }
+    }
+
+    async Task<HttpResponseData> ReturnBadRequest(HttpRequestData req, string err)
+    {
+        var errorReq = req.CreateResponse(HttpStatusCode.BadRequest);
+        _logger.LogWarning(err);
+        await errorReq.WriteStringAsync(err);
+        return errorReq;
     }
 
     // https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-create-api-app#perform-long-running-tasks-with-the-polling-action-pattern

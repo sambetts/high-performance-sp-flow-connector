@@ -6,6 +6,10 @@ namespace Engine.SharePoint;
 
 public static class CSOMExtensions
 {
+    public static async Task ExecuteQueryAsyncWithThrottleRetries(this ClientContext clientContext, ILogger tracer)
+    { 
+        await ExecuteQueryAsyncWithThrottleRetries(clientContext, tracer, null); 
+    }
     public static async Task ExecuteQueryAsyncWithThrottleRetries(this ClientContext clientContext, ILogger tracer, Action? throttledCallback)
     {
         int retryAttempts = 0;

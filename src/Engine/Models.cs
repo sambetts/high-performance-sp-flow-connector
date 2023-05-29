@@ -9,6 +9,7 @@ namespace Engine.Models;
 public record StartCopyRequest(string CurrentWebUrl, string RelativeUrlToCopy, string DestinationWebUrl, string RelativeUrlDestination, ConflictResolution ConflictResolution, bool DeleteAfterCopy)
 {
     public bool IsValid => !string.IsNullOrEmpty(CurrentWebUrl) && !string.IsNullOrEmpty(RelativeUrlToCopy) && !string.IsNullOrEmpty(DestinationWebUrl) && !string.IsNullOrEmpty(RelativeUrlDestination);
+    public bool IsForTenant(string tenantUrl) => CurrentWebUrl.StartsWith(tenantUrl) && DestinationWebUrl.StartsWith(tenantUrl);
 }
 
 public class AsyncStartCopyRequest
